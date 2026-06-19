@@ -1,0 +1,337 @@
+(;CA[utf-8]C[引擎规则\: 日本规则]AP[Lizzie: yzy2.1]SZ[19]DZ[G]GC[比赛规定黑先贴五目半，时限每方3小时]
+EV[第一届中日围棋擂台赛]RO[272]DT[1985-08-27]PC[日本东京]PB[聂卫平]
+BR[九段]BT[中国队]PW[小林光一]WR[九段]WT[日本队]KM[5.5]TM[每方3小时]
+RE[B+2.5]MULTIGOGM[1]
+;LZ[ 50.0 0
+]B[pd];LZ[ 50.0 0
+]W[dd];LZ[ 50.0 0
+]B[dq];LZ[ 50.0 0
+]W[qp];LZ[ 50.0 0
+]
+B[cf];LZ[ 50.0 0
+]W[fc];LZ[ 50.0 0
+]B[bd];LZ[ 50.0 0
+]W[do];LZ[ 50.0 0
+]B[co];LZ[ 50.0 0
+]
+W[cn];LZ[ 50.0 0
+]B[cp];LZ[ 50.0 0
+]W[dn];LZ[ 50.0 0
+]B[fq];LZ[ 50.0 0
+]W[ch];LZ[ 50.0 0
+]
+B[cc];LZ[ 50.0 0
+]W[ce];LZ[ 50.0 0
+]B[be];LZ[ 50.0 0
+]W[df];LZ[ 50.0 0
+]B[dg];LZ[ 50.0 0
+]
+W[cg];LZ[ 50.0 0
+]B[bf];LZ[ 50.0 0
+]W[eg];LZ[ 50.0 0
+]B[oq];LZ[ 50.0 0
+]W[dh];LZ[ 50.0 0
+]
+B[mc];LZ[ 50.0 0
+]W[go];LZ[ 50.0 0
+]B[qj];LZ[ 50.0 0
+]W[qm];LZ[ 50.0 0
+]B[oj];LZ[ 50.0 0
+]
+W[kd];LZ[ 50.0 0
+]B[le];LZ[ 50.0 0
+]W[ke];LZ[ 50.0 0
+]B[lf];LZ[ 50.0 0
+]W[qc];LZ[ 50.0 0
+]
+B[qd];LZ[ 50.0 0
+]W[pc];LZ[ 50.0 0
+]B[rc];LZ[ 50.0 0
+]W[nc];LZ[ 50.0 0
+]B[od];LZ[ 50.0 0
+]
+W[nd];LZ[ 50.0 0
+]B[ld];LZ[ 50.0 0
+]W[nb];LZ[ 50.0 0
+]B[kc];LZ[ 50.0 0
+]W[rb];LZ[ 50.0 0
+]
+B[rd];LZ[ 50.0 0
+]W[sb];LZ[ 50.0 0
+]B[ne];LZ[ 50.0 0
+]W[mq];LZ[ 50.0 0
+]B[qq];LZ[ 50.0 0
+]
+W[rq];LZ[ 50.0 0
+]B[rr];LZ[ 50.0 0
+]W[pq];LZ[ 50.0 0
+]B[qr];LZ[ 50.0 0
+]W[pp];LZ[ 50.0 0
+]
+B[pr];LZ[ 50.0 0
+]W[rp];LZ[ 50.0 0
+]B[nq];LZ[ 50.0 0
+]W[mp];LZ[ 50.0 0
+]B[no];LZ[ 50.0 0
+]
+W[pk];LZ[ 50.0 0
+]B[pj];LZ[ 50.0 0
+]W[np];LZ[ 50.0 0
+]B[op];LZ[ 50.0 0
+]W[oo];LZ[ 50.0 0
+]
+B[on];LZ[ 50.0 0
+]W[po];LZ[ 50.0 0
+]B[mr];LZ[ 50.0 0
+]W[lr];LZ[ 50.0 0
+]B[nr];LZ[ 50.0 0
+]
+W[lo];LZ[ 50.0 0
+]B[nm];LZ[ 50.0 0
+]W[os];LZ[ 50.0 0
+]B[sr];LZ[ 50.0 0
+]W[ms];LZ[ 50.0 0
+]
+B[or];LZ[ 50.0 0
+]W[qk];LZ[ 50.0 0
+]B[hp];LZ[ 50.0 0
+]W[nl];LZ[ 50.0 0
+]B[kq];LZ[ 50.0 0
+]
+W[lq];LZ[ 50.0 0
+]B[ml];LZ[ 50.0 0
+]W[nk];LZ[ 50.0 0
+]B[kn];LZ[ 50.0 0
+]W[jp];LZ[ 50.0 0
+]
+B[jo];LZ[ 50.0 0
+]W[kp];LZ[ 50.0 0
+]B[ip];LZ[ 50.0 0
+]W[iq];LZ[ 50.0 0
+]B[hq];LZ[ 50.0 0
+]
+W[in];LZ[ 50.0 0
+]B[io];LZ[ 50.0 0
+]W[ir];LZ[ 50.0 0
+]B[gk];LZ[ 50.0 0
+]W[jc];LZ[ 50.0 0
+]
+B[dl];LZ[ 50.0 0
+]W[gm];LZ[ 50.0 0
+]B[gl];LZ[ 50.0 0
+]W[ek];LZ[ 50.0 0
+]B[el];LZ[ 50.0 0
+]
+W[fm];LZ[ 50.0 0
+]B[fl];LZ[ 50.0 0
+]W[bl];LZ[ 50.0 0
+]B[il];LZ[ 50.0 0
+]W[kb];LZ[ 50.0 0
+]
+B[lc];LZ[ 50.0 0
+]W[db];LZ[ 50.0 0
+]B[cb];LZ[ 50.0 0
+]W[id];LZ[ 50.0 0
+]B[bn];LZ[ 50.0 0
+]
+W[bm];LZ[ 50.0 0
+]B[bo];LZ[ 50.0 0
+]W[cl];LZ[ 50.0 0
+]B[dk];LZ[ 50.0 0
+]W[cj];LZ[ 50.0 0
+]
+B[kf];LZ[ 50.0 0
+]W[rk];LZ[ 50.0 0
+]B[rj];LZ[ 50.0 0
+]W[mk];LZ[ 50.0 0
+]B[mm];LZ[ 50.0 0
+]
+W[sj];LZ[ 50.0 0
+]B[si];LZ[ 50.0 0
+]W[sk];LZ[ 50.0 0
+]B[rh];LZ[ 50.0 0
+]W[mi];LZ[ 50.0 0
+]
+B[ns];LZ[ 50.0 0
+]W[if];LZ[ 50.0 0
+]B[je];LZ[ 50.0 0
+]W[jd];LZ[ 50.0 0
+]B[ck];LZ[ 50.0 0
+]
+W[bk];LZ[ 50.0 0
+]B[gg];LZ[ 50.0 0
+]W[hg];LZ[ 50.0 0
+]B[fg];LZ[ 50.0 0
+]W[gi];LZ[ 50.0 0
+]
+B[fi];LZ[ 50.0 0
+]W[hh];LZ[ 50.0 0
+]B[gh];LZ[ 50.0 0
+]W[hj];LZ[ 50.0 0
+]B[nh];LZ[ 50.0 0
+]
+W[jl];LZ[ 50.0 0
+]B[im];LZ[ 50.0 0
+]W[jm];LZ[ 50.0 0
+]B[hn];LZ[ 50.0 0
+]W[ik];LZ[ 50.0 0
+]
+B[gj];LZ[ 50.0 0
+]W[hi];LZ[ 50.0 0
+]B[jn];LZ[ 50.0 0
+]W[hr];LZ[ 50.0 0
+]B[fo];LZ[ 50.0 0
+]
+W[fn];LZ[ 50.0 0
+]B[dm];LZ[ 50.0 0
+]W[cm];LZ[ 50.0 0
+]B[en];LZ[ 50.0 0
+]W[fp];LZ[ 50.0 0
+]
+B[eo];LZ[ 50.0 0
+]W[ep];LZ[ 50.0 0
+]B[em];LZ[ 50.0 0
+]W[gp];LZ[ 50.0 0
+]B[dp];LZ[ 50.0 0
+]
+W[gq];LZ[ 50.0 0
+]B[fr];LZ[ 50.0 0
+]W[gr];LZ[ 50.0 0
+]B[gn];LZ[ 50.0 0
+]W[fs];LZ[ 50.0 0
+]
+B[dr];LZ[ 50.0 0
+]W[ni];LZ[ 50.0 0
+]B[oi];LZ[ 50.0 0
+]W[mh];LZ[ 50.0 0
+]B[ng];LZ[ 50.0 0
+]
+W[ds];LZ[ 50.0 0
+]B[cs];LZ[ 50.0 0
+]W[es];LZ[ 50.0 0
+]B[br];LZ[ 50.0 0
+]W[kl];LZ[ 50.0 0
+]
+B[ol];LZ[ 50.0 0
+]W[ok];LZ[ 50.0 0
+]B[ln];LZ[ 50.0 0
+]W[dj];LZ[ 50.0 0
+]B[ej];LZ[ 50.0 0
+]
+W[ei];LZ[ 50.0 0
+]B[fj];LZ[ 50.0 0
+]W[gf];LZ[ 50.0 0
+]B[ff];LZ[ 50.0 0
+]W[fe];LZ[ 50.0 0
+]
+B[ge];LZ[ 50.0 0
+]W[hf]
+(;LZ[ 50.0 0
+]B[ee];LZ[ 50.0 0
+]W[fd];LZ[ 50.0 0
+]B[ef];LZ[ 50.0 0
+]W[eh];LZ[ 50.0 0
+]
+B[de];LZ[ 50.0 0
+]W[fh];LZ[ 50.0 0
+]B[cd];LZ[ 50.0 0
+]W[ed];LZ[ 50.0 0
+]B[dg];LZ[ 50.0 0
+]
+W[ca];LZ[ 50.0 0
+]B[ba];LZ[ 50.0 0
+]W[da];LZ[ 50.0 0
+]B[dc];LZ[ 50.0 0
+]W[eb];LZ[ 50.0 0
+]
+B[bb];LZ[ 50.0 0
+]W[df];LZ[ 50.0 0
+]B[mb];LZ[ 50.0 0
+]W[oc];LZ[ 50.0 0
+]B[dg];LZ[ 50.0 0
+]
+W[kh];LZ[ 50.0 0
+]B[ll];LZ[ 50.0 0
+]W[lk];LZ[ 50.0 0
+]B[hk];LZ[ 50.0 0
+]W[jj];LZ[ 50.0 0
+]
+B[na];LZ[ 50.0 0
+]W[oa];LZ[ 50.0 0
+]B[la];LZ[ 50.0 0
+]W[jf];LZ[ 50.0 0
+]B[pa];LZ[ 50.0 0
+]
+W[ma];LZ[ 50.0 0
+]B[ls];LZ[ 50.0 0
+]W[kr];LZ[ 50.0 0
+]B[na];LZ[ 50.0 0
+]W[qa];LZ[ 50.0 0
+]
+B[ob];LZ[ 50.0 0
+]W[pb];LZ[ 50.0 0
+]B[ja];LZ[ 50.0 0
+]W[ib];LZ[ 50.0 0
+]B[ka];LZ[ 50.0 0
+]
+W[df];LZ[ 50.0 0
+]B[pn];LZ[ 50.0 0
+]W[qn];LZ[ 50.0 0
+]B[dg];LZ[ 50.0 0
+]W[mg];LZ[ 50.0 0
+]
+B[gb];LZ[ 50.0 0
+]W[fb];LZ[ 50.0 0
+]B[ia];LZ[ 50.0 0
+]W[df];LZ[ 50.0 0
+]B[ce];LZ[ 50.0 0
+]
+W[hb];LZ[ 50.0 0
+]B[ha];LZ[ 50.0 0
+]W[gc];LZ[ 50.0 0
+]B[ah];LZ[ 50.0 0
+]W[bi];LZ[ 50.0 0
+]
+B[mf];LZ[ 50.0 0
+]W[ga];LZ[ 50.0 0
+]B[mo];LZ[ 50.0 0
+]W[pl];LZ[ 50.0 0
+]B[ko];LZ[ 50.0 0
+]
+W[lp];LZ[ 50.0 0
+]B[om];LZ[ 50.0 0
+]W[jb];LZ[ 50.0 0
+]B[sq];LZ[ 50.0 0
+]W[sp];LZ[ 50.0 0
+]
+B[kg];LZ[ 50.0 0
+]W[jg];LZ[ 50.0 0
+]B[nj];LZ[ 50.0 0
+]W[mj];LZ[ 50.0 0
+]B[am];LZ[ 50.0 0
+]
+W[al];LZ[ 50.0 0
+]B[an];LZ[ 50.0 0
+]W[sc];LZ[ 50.0 0
+]B[sd];LZ[ 50.0 0
+]W[km];LZ[ 50.0 0
+]
+B[lm];LZ[ 50.0 0
+]W[bg];LZ[ 50.0 0
+]B[ag];LZ[ 50.0 0
+]W[ai];LZ[ 50.0 0
+]B[lg];LZ[ 50.0 0
+]
+W[lh];LZ[ 50.0 0
+]B[md];LZ[ 50.0 0
+]W[oa];LZ[ 50.0 0
+]B[ma];LZ[ 50.0 0
+]W[ks];LZ[ 50.0 0
+]
+B[ms];LZ[Kata1-40B 0.1 859 1.6 0.7
+move H5 visits 126 winrate 9985 prior 13.4581 scoreMean 1.58822 pv H5 B12 A14 G1 E17 Q7 info move A14 visits 122 winrate 9986 prior 13.291500000000001 scoreMean 1.53449 pv A14 M18 H5 B12 E3 info move M18 visits 120 winrate 9984 prior 13.117400000000002 scoreMean 1.58369 pv M18 E3 E2 G1 E17 H5 Q7 info move Q7 visits 113 winrate 9983 prior 12.410300000000001 scoreMean 1.55642 pv Q7 H5 E17 M18 E3 info move E17 visits 104 winrate 9983 prior 11.241900000000001 scoreMean 1.55469 pv E17 H5 M18 G1 Q7 info move E3 visits 103 winrate 9982 prior 11.373 scoreMean 1.51839 pv E3 E17 E2 G1 H5 info move E2 visits 75 winrate 9950 prior 9.24957 scoreMean 1.9277 pv E2 G1 H5 B12 A14 info move J10 visits 11 winrate 9971 prior 1.4005699999999999 scoreMean 1.53213 pv J10 K9 H5 G1 info move B10 visits 10 winrate 9972 prior 1.3815600000000001 scoreMean 1.52603 pv B10 A10 A14 G1 info move A9 visits 10 winrate 9970 prior 1.34167 scoreMean 1.43822 pv A9 A10 A14 G1 info ]
+W[dg]C[白棋 胜率\: 0.1% 
+盘面\: 8.1 不确定度\: 0.7
+(Kata1-40B / 859 计算量)
+贴目\: 6.5])
+(;B[dc];W[ef];B[fh];W[eb];B[fd];W[ee];B[ec];W[gc];B[ed];W[gd]))

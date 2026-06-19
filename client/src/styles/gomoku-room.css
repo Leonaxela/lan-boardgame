@@ -1,0 +1,20 @@
+/* ─── 五子棋专用样式 ─── */
+
+/* ═══════════════════════════════════════════════════
+   五子棋房间 - 移动端适配
+   ═══════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .room-board {
+    padding-top: 48px;
+    padding-bottom: 64px;
+  }
+
+  /* 五子棋侧边栏移动端 */
+  .gomoku-sidebar .sidebar-actions {
+    padding-bottom: 16px;
+  }
+  .gomoku-sidebar .btn-sidebar {
+    padding: 12px;
+    font-size: 14px;
+  }
+}

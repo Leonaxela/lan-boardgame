@@ -1,0 +1,22 @@
+{
+  "name": "lan-boardgame",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "client",
+    "server",
+    "games/*"
+  ],
+  "scripts": {
+    "client": "npm --prefix client run dev",
+    "server": "npm --prefix server run dev",
+    "test": "npx tsx games/go/src/__tests__/engine.test.ts && npx tsx games/go/src/__tests__/ai.test.ts"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.22.4"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
+}

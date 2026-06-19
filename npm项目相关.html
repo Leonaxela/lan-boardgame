@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>npm 项目相关知识</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; line-height: 1.7; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 30px; font-size: 28px; color: #1a1a1a; }
+    .card { background: #fff; border-radius: 10px; padding: 24px 28px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .card h2 { font-size: 20px; color: #c0392b; margin-bottom: 14px; border-bottom: 2px solid #f0f0f0; padding-bottom: 8px; }
+    .card h3 { font-size: 16px; color: #2c3e50; margin: 16px 0 8px; }
+    .card p { margin-bottom: 10px; font-size: 15px; }
+    .card ul, .card ol { margin: 8px 0 12px 24px; }
+    .card li { margin-bottom: 6px; font-size: 15px; }
+    code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-family: "Cascadia Code", "Fira Code", Consolas, monospace; font-size: 14px; color: #c0392b; }
+    pre { background: #1e1e1e; color: #d4d4d4; padding: 16px 20px; border-radius: 8px; overflow-x: auto; margin: 10px 0 14px; font-size: 13.5px; line-height: 1.6; font-family: "Cascadia Code", "Fira Code", Consolas, monospace; }
+    pre .comment { color: #6a9955; }
+    pre .highlight { color: #569cd6; }
+    .diagram { background: #fafafa; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px 20px; margin: 10px 0 14px; font-family: "Cascadia Code", "Fira Code", Consolas, monospace; font-size: 13.5px; line-height: 1.8; white-space: pre; overflow-x: auto; }
+    .warn { background: #fff8e1; border-left: 4px solid #f39c12; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 14px; }
+    .tip { background: #e8f5e9; border-left: 4px solid #27ae60; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 10px 0; font-size: 14px; }
+    .tag { display: inline-block; background: #e74c3c; color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-left: 6px; vertical-align: middle; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>npm 项目相关知识</h1>
+
+  <!-- ========== 1. npm workspace 模式 ========== -->
+  <div class="card">
+    <h2>一、npm workspace 模式</h2>
+    <p>当我们根目录的 <code>package.json</code> 中写了 <code>"workspaces"</code> 字段，npm 就进入了 <strong>workspace 模式</strong>（也叫 monorepo 模式）。</p>
+
+    <h3>1.1 什么是 workspace？</h3>
+    <p>一个项目<strong>不是单独的包，而是由多个包组成</strong>。每个子目录都是一个独立的 npm 包，有各自的 <code>package.json</code>。</p>
+    <p>以本项目为例：</p>
+    <pre><span class="comment">// 根目录 package.json</span>
+{
+  "name": "lan-boardgame",
+  "private": true,
+  <span class="highlight">"workspaces": [
+    "shared",
+    "client",
+    "server",
+    "games/*"
+  ]</span>
+}</pre>
+
+    <h3>1.2 本项目的包结构</h3>
+    <div class="diagram">lan-boardgame/                    <span class="comment">← 根项目（workspace 入口）</span>
+├── package.json
+├── package-lock.json
+├── node_modules/               <span class="comment">← 所有包共享这一份依赖</span>
+│   └── @lan-boardgame/
+│       ├── shared/  ──────────→  shared/
+│       ├── client/  ──────────→  client/
+│       ├── server/  ──────────→  server/
+│       ├── go/      ──────────→  games/go/
+│       ├── gomoku/  ──────────→  games/gomoku/
+│       ├── chess/   ──────────→  games/chess/
+│       └── chinese-chess/  ──→  games/chinese-chess/
+├── shared/package.json         <span class="comment">← name: "@lan-boardgame/shared"</span>
+├── client/package.json         <span class="comment">← name: "@lan-boardgame/client"</span>
+├── server/package.json         <span class="comment">← name: "@lan-boardgame/server"</span>
+└── games/
+    ├── go/package.json         <span class="comment">← name: "@lan-boardgame/go"</span>
+    ├── gomoku/package.json     <span class="comment">← name: "@lan-boardgame/gomoku"</span>
+    ├── chess/package.json      <span class="comment">← name: "@lan-boardgame/chess"</span>
+    ├── chinese-chess/package.json
+    └── draughts/package.json   <span class="comment">← name: "@lan-boardgame/draughts"</span></div>
+
+    <h3>1.3 workspace 的好处</h3>
+    <ul>
+      <li><strong>依赖共享</strong>：所有包的依赖（express、ws 等）只在根 <code>node_modules</code> 里装一份，不重复</li>
+      <li><strong>互相引用</strong>：子包之间可以直接用 <code>@lan-boardgame/xxx</code> 互相 import，不需要发布到 npm</li>
+      <li><strong>统一管理</strong>：在根目录执行 <code>npm install</code> 一次，所有包的依赖都会安装</li>
+    </ul>
+  </div>
+
+  <!-- ========== 2. 符号链接 ========== -->
+  <div class="card">
+    <h2>二、符号链接（Symlink）</h2>
+    <h3>2.1 什么是符号链接？</h3>
+    <p>符号链接就是一个<strong>快捷方式 / 指针</strong>，指向实际的文件或目录。它本身不包含内容，只是告诉系统："去找那个目录"。</p>
+
+    <h3>2.2 workspace 中的符号链接</h3>
+    <p>执行 <code>npm install</code> 后，npm 会在根目录 <code>node_modules/@lan-boardgame/</code> 下为每个 workspace 包创建一个符号链接：</p>
+    <div class="diagram">node_modules/@lan-boardgame/chess   ──→  games/chess/
+node_modules/@lan-boardgame/go      ──→  games/go/
+node_modules/@lan-boardgame/gomoku  ──→  games/gomoku/</div>
+    <p>这样，当 <code>server</code> 里写：</p>
+    <pre><span class="comment">// server/src/websocket/Dispatcher.ts</span>
+import { ChessEngine } from '@lan-boardgame/chess/engine';</pre>
+    <p>Node.js 的解析过程是：</p>
+    <ol>
+      <li>找到 <code>node_modules/@lan-boardgame/chess</code>（符号链接）</li>
+      <li>顺着链接找到 <code>games/chess/</code>（实际目录）</li>
+      <li>根据 <code>package.json</code> 的 <code>"exports"</code> 字段，定位到 <code>src/rules/engine.ts</code></li>
+    </ol>
+
+    <h3>2.3 符号链接缺失会怎样？</h3>
+    <div class="warn">如果 <code>node_modules/@lan-boardgame/draughts</code> 不存在，Node.js 会在 <code>node_modules</code> 里找不到 <code>@lan-boardgame/draughts</code> 这个包，抛出 <code>ERR_MODULE_NOT_FOUND</code> 错误。</div>
+  </div>
+
+  <!-- ========== 3. package-lock.json ========== -->
+  <div class="card">
+    <h2>三、package-lock.json</h2>
+    <h3>3.1 什么是 lock 文件？</h3>
+    <p><code>package-lock.json</code> 是 npm <strong>自动生成</strong>的依赖清单，记录了项目所有依赖包的：</p>
+    <ul>
+      <li><strong>精确版本号</strong>（比如 <code>^4.21.1</code> 可能安装了 <code>4.21.2</code>）</li>
+      <li><strong>下载地址</strong>（resolved URL）</li>
+      <li><strong>校验码</strong>（integrity hash，确保包内容没被篡改）</li>
+      <li><strong>依赖树</strong>（每个包的子依赖是什么）</li>
+    </ul>
+
+    <h3>3.2 workspace 模式下的 lock 文件</h3>
+    <p>在 workspace 模式下，lock 文件还会记录<strong>哪些本地包被链接进了 node_modules</strong>。npm 通过 lock 文件判断需要创建哪些符号链接。</p>
+    <p>你的 lock 文件里记录了 chess、go、gomoku 等，但<strong>没有 draughts</strong> ——因为上次 <code>npm install</code> 时 draughts 还不存在。</p>
+
+    <h3>3.3 为什么不能手动编辑？</h3>
+    <div class="warn">lock 文件除了包名外，还包含 resolved URL、integrity hash、嵌套依赖树等复杂信息，手动编写容易出错且格式难以维护。</div>
+  </div>
+
+  <!-- ========== 4. 本次问题排查 ========== -->
+  <div class="card">
+    <h2>四、本次问题排查<span class="tag">实战</span></h2>
+    <h3>4.1 错误现象</h3>
+    <pre><span class="comment">// 执行 npm run server 后报错：</span>
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@lan-boardgame/draughts'
+  imported from D:\...\server\src\websocket\Dispatcher.ts</pre>
+
+    <h3>4.2 排查过程</h3>
+    <ol>
+      <li>检查 <code>games/draughts/package.json</code> → 存在，配置正确</li>
+      <li>检查 <code>node_modules/@lan-boardgame/</code> 目录 → <strong>没有 draughts 的符号链接</strong></li>
+      <li>检查 <code>package-lock.json</code> → <strong>没有 draughts 的记录</strong></li>
+      <li>对比其他游戏包（chess、gomoku 等）的 package.json → 配置完全一致</li>
+    </ol>
+
+    <h3>4.3 根因</h3>
+    <p>draughts 是在上次 <code>npm install</code> 之后才创建的，所以 lock 文件和符号链接中都没有它。</p>
+
+    <h3>4.4 修复方法</h3>
+    <div class="tip">在项目根目录重新执行一次 <code>npm install</code>，npm 会重新扫描所有 workspace 包，为 draughts 创建符号链接并更新 lock 文件。</div>
+  </div>
+
+  <!-- ========== 5. 服务启动全流程 ========== -->
+  <div class="card">
+    <h2>五、服务启动全流程<span class="tag">实战</span></h2>
+    <p>执行 <code>npm run server</code> 后，5 条日志的完整输出流程如下：</p>
+
+    <div class="flow">
+      <div class="flow-node start">npm run server</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node step">npm --prefix server run dev</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node step">tsx watch src/index.ts</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node phase">阶段一：模块加载（import 阶段）</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">index.ts 加载所有 import</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">WSServer.ts import EmojiGameManager.ts</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node log log1">[Emoji] 已加载 100 道题目</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node phase">阶段二：执行 start() 函数</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">await initDb()</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node log log2">[DB] 已加载数据库文件</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node log log3">[DB] 数据库已初始化</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">注册路由 → 创建 HTTP Server</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">创建 RoomManager + ChatHandler + GameWSServer</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node import">httpServer.listen(8080)</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node log log4">[Server] http://localhost:8080</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node log log5">[Server] WS: ws://localhost:8080</div>
+      <div class="flow-arrow">▼</div>
+
+      <div class="flow-node start">服务启动完成</div>
+    </div>
+
+    <h3>5.1 为什么 Emoji 最先输出？</h3>
+    <p>关键在于 <strong>import 是在文件顶部声明的</strong>，Node.js 加载模块时会<strong>先解析所有 import</strong>，再执行代码。</p>
+    <p>加载链路：</p>
+    <pre><span class="comment">// index.ts 第 7 行</span>
+import { GameWSServer } from './websocket/WSServer.js';
+
+<span class="comment">// WSServer.ts 第 12 行</span>
+import { handleEmojiMessage } from '../emoji/EmojiGameManager.js';
+
+<span class="comment">// EmojiGameManager.ts 第 48 行（模块顶层，非函数内）</span>
+loadQuestions();  <span class="comment">// ← 加载完就立即执行，输出日志</span></pre>
+    <p>所以：<code>index.ts</code> import 了 <code>WSServer.ts</code>，<code>WSServer.ts</code> import 了 <code>EmojiGameManager.ts</code>，而 <code>EmojiGameManager.ts</code> 在<strong>模块顶层</strong>直接调用了 <code>loadQuestions()</code>，不需要等 <code>start()</code> 执行。</p>
+
+    <h3>5.2 两条 DB 日志的间隔</h3>
+    <pre><span class="comment">// connection.ts</span>
+export async function initDb() {
+  <span class="comment">// ... 初始化 SQL 引擎 ...</span>
+
+  if (existsSync(DB_PATH)) {
+    db = new SQL.Database(buffer);
+    console.log('[DB] 已加载数据库文件');   <span class="comment">// ← 第 2 条日志</span>
+  }
+
+  <span class="comment">// ... 执行 schema.sql、迁移、清空过期数据 ...</span>
+
+  console.log('[DB] 数据库已初始化');        <span class="comment">// ← 第 3 条日志</span>
+}</pre>
+    <p>两条日志之间的间隔是数据库初始化耗时（读取 schema、执行 SQL、迁移等）。</p>
+
+    <h3>5.3 两条 Server 日志</h3>
+    <pre><span class="comment">// index.ts</span>
+httpServer.listen(PORT, () => {
+  console.log(`[Server] http://localhost:${PORT}`);   <span class="comment">// ← 第 4 条</span>
+  console.log(`[Server] WS: ws://localhost:${PORT}`); <span class="comment">// ← 第 5 条</span>
+});</pre>
+    <p>这两条在 <code>listen</code> 的回调函数中，表示 TCP 端口监听成功。</p>
+  </div>
+
+  <style>
+    .flow { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 16px 0; }
+    .flow-arrow { color: #aaa; font-size: 18px; line-height: 1; margin: 2px 0; }
+    .flow-node { padding: 10px 20px; border-radius: 8px; font-size: 13.5px; text-align: center; max-width: 480px; width: 100%; font-family: "Cascadia Code", "Fira Code", Consolas, monospace; }
+    .flow-node.start { background: #e74c3c; color: #fff; font-weight: bold; }
+    .flow-node.step { background: #3498db; color: #fff; }
+    .flow-node.phase { background: #f39c12; color: #fff; font-weight: bold; }
+    .flow-node.import { background: #ecf0f1; color: #2c3e50; border: 1px solid #ddd; }
+    .flow-node.log { background: #2ecc71; color: #fff; font-weight: bold; letter-spacing: 0.5px; }
+  </style>
+
+  <!-- ========== 6. 常用命令 ========== -->
+  <div class="card">
+    <h2>六、常用 npm workspace 命令</h2>
+    <ul>
+      <li><code>npm install</code> — 在根目录执行，安装所有依赖并创建符号链接</li>
+      <li><code>npm install &lt;pkg&gt; -w @lan-boardgame/server</code> — 给指定子包安装依赖</li>
+      <li><code>npm run dev -w server</code> — 在指定子包中运行脚本</li>
+      <li><code>npm ls --all</code> — 查看完整的依赖树</li>
+    </ul>
+  </div>
+
+</div>
+</body>
+</html>

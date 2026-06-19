@@ -1,0 +1,104 @@
+2026-06-18 13:19:56+0800: Running with following config:
+allowResignation = true
+lagBuffer = 1.0
+logAllGTPCommunication = true
+logDir = gtp_logs
+logSearchInfo = true
+logSearchInfoForChosenMove = false
+logToStderr = false
+maxTime = 60
+maxTimePondering = 60.0
+maxVisits = 2000
+numSearchThreads = 6
+ponderingEnabled = false
+resignConsecTurns = 3
+resignThreshold = -0.90
+rules = tromp-taylor
+searchFactorAfterOnePass = 0.50
+searchFactorAfterTwoPass = 0.25
+searchFactorWhenWinning = 0.40
+searchFactorWhenWinningThreshold = 0.95
+
+2026-06-18 13:19:56+0800: GTP Engine starting...
+2026-06-18 13:19:56+0800: KataGo v1.16.5
+2026-06-18 13:19:56+0800: Using TrompTaylor rules initially, unless GTP/GUI overrides this
+2026-06-18 13:19:56+0800: Using 6 CPU thread(s) for search
+2026-06-18 13:19:56+0800: nnRandSeed0 = 7846538961669716832
+2026-06-18 13:19:56+0800: After dedups: nnModelFile0 = D:\Program Files\Reasonix\workspace\lan-boardgame\server\katago\kata1-zhizi-b28c512nbt-muonfd2.bin.gz useFP16 auto useNHWC auto
+2026-06-18 13:19:56+0800: Initializing neural net buffer to be size 19 * 19 exactly
+2026-06-18 13:20:02+0800: Found OpenCL Platform 0: AMD Accelerated Parallel Processing (Advanced Micro Devices, Inc.) (OpenCL 2.1 AMD-APP (2841.5))
+2026-06-18 13:20:02+0800: Found 1 device(s) on platform 0 with type CPU or GPU or Accelerator
+2026-06-18 13:20:02+0800: Found OpenCL Device 0: gfx902 (Advanced Micro Devices, Inc.) (score 11000200)
+2026-06-18 13:20:02+0800: Creating context for OpenCL Platform: AMD Accelerated Parallel Processing (Advanced Micro Devices, Inc.) (OpenCL 2.1 AMD-APP (2841.5))
+2026-06-18 13:20:02+0800: Using OpenCL Device 0: gfx902 (Advanced Micro Devices, Inc.) OpenCL 2.0 AMD-APP (2841.5) (Extensions: cl_khr_fp64 cl_amd_fp64 cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_local_int32_base_atomics cl_khr_local_int32_extended_atomics cl_khr_int64_base_atomics cl_khr_int64_extended_atomics cl_khr_3d_image_writes cl_khr_byte_addressable_store cl_khr_fp16 cl_khr_gl_sharing cl_khr_gl_depth_images cl_amd_device_attribute_query cl_amd_vec3 cl_amd_printf cl_amd_media_ops cl_amd_media_ops2 cl_amd_popcnt cl_khr_d3d10_sharing cl_khr_d3d11_sharing cl_khr_dx9_media_sharing cl_khr_image2d_from_buffer cl_khr_spir cl_khr_subgroups cl_khr_gl_event cl_khr_depth_images cl_khr_mipmap_image cl_khr_mipmap_image_writes cl_amd_liquid_flash cl_amd_planar_yuv)
+2026-06-18 13:20:02+0800: Loaded tuning parameters from: D:\Program Files\Reasonix\workspace\lan-boardgame\server\katago\katago-v1.16.5-opencl-windows-x64/KataGoData/opencltuning/tune11_gpugfx902_x19_y19_c512_mv15.txt
+2026-06-18 13:20:08+0800: OpenCL backend thread 0: Model version 15
+2026-06-18 13:20:08+0800: OpenCL backend thread 0: Model name: zhizi_hzy_b28_muonfd2
+2026-06-18 13:20:24+0800: OpenCL backend thread 0: FP16Storage true FP16Compute true FP16TensorCores false FP16TensorCoresFor1x1 false
+2026-06-18 13:20:24+0800: Loaded neural net with nnXLen 19 nnYLen 19
+2026-06-18 13:20:24+0800: Initializing board with boardXSize 19 boardYSize 19
+2026-06-18 13:20:24+0800: Loaded config D:\Program Files\Reasonix\workspace\lan-boardgame\server\katago\katago-v1.16.5-opencl-windows-x64\default_gtp.cfg and/or command-line and query overrides
+2026-06-18 13:20:24+0800: Loaded model D:\Program Files\Reasonix\workspace\lan-boardgame\server\katago\kata1-zhizi-b28c512nbt-muonfd2.bin.gz
+2026-06-18 13:20:24+0800: Config override: maxTime = 60
+2026-06-18 13:20:24+0800: Config override: maxVisits = 2000
+2026-06-18 13:20:24+0800: Model name: zhizi_hzy_b28_muonfd2
+2026-06-18 13:20:24+0800: GTP ready, beginning main protocol loop
+2026-06-18 13:20:24+0800: Controller: name
+2026-06-18 13:20:24+0800: = KataGo
+2026-06-18 13:20:24+0800: Controller: boardsize 19
+2026-06-18 13:20:24+0800: = 
+2026-06-18 13:20:24+0800: Controller: kata-set-rules chinese
+2026-06-18 13:20:24+0800: Changed rules to Chinese
+2026-06-18 13:20:24+0800: = 
+2026-06-18 13:20:24+0800: Controller: komi 7.5
+2026-06-18 13:20:24+0800: = 
+2026-06-18 13:20:24+0800: Controller: clear_board
+2026-06-18 13:20:24+0800: = 
+2026-06-18 13:20:38+0800: Controller: play black Q16
+2026-06-18 13:20:38+0800: = 
+2026-06-18 13:20:38+0800: Controller: genmove white
+2026-06-18 13:21:39+0800: MoveNum: 1 HASH: D787FAD66281F76731DCD9C1B3387463
+   A B C D E F G H J K L M N O P Q R S T
+19 . . . . . . . . . . . . . . . . . . .
+18 . . . . . . . . . . . . . . . . . . .
+17 . . . . . . . . . . . . . . . . . . .
+16 . . . . . . . . . . . . . . . X1. . .
+15 . . . . . . . . . . . . . . . . . . .
+14 . . . . . . . . . . . . . . . . . . .
+13 . . . . . . . . . . . . . . . . . . .
+12 . . . . . . . . . . . . . . . . . . .
+11 . . . . . . . . . . . . . . . . . . .
+10 . . . . . . . . . . . . . . . . . . .
+ 9 . . . . . . . . . . . . . . . . . . .
+ 8 . . . . . . . . . . . . . . . . . . .
+ 7 . . . . . . . . . . . . . . . . . . .
+ 6 . . . . . . . . . . . . . . . . . . .
+ 5 . . . . . . . . . . . . . . . . . . .
+ 4 . . . @ . . . . . . . . . . . . . . .
+ 3 . . . . . . . . . . . . . . . . . . .
+ 2 . . . . . . . . . . . . . . . . . . .
+ 1 . . . . . . . . . . . . . . . . . . .
+
+koSIMPLEscoreAREAtaxNONEsui0whbNfpok1komi7.5
+Time taken: 60.437
+Root visits: 793
+New playouts: 793
+NN rows: 692
+NN batches: 232
+NN avg batch size: 2.98276
+PV: D4 Q4 D16 F17 R3 R4 Q3 P4 P3 N3 O3 O4 N2 M3 M2
+Tree:
+: T  31.08c W  30.36c S   0.14c ( +1.7 L  +1.0) N     793  --  D4 Q4 D16 F17 R3 R4 Q3
+---White(^)---
+D4  : T  31.48c W  30.53c S   0.16c ( +1.7 L  +1.0) LCB   28.47c P 37.27% WF 1802.3 PSV    1798 N     628  --  D4 Q4 D16 F17 R3 R4 Q3 P4
+D16 : T  31.06c W  30.61c S   0.17c ( +1.7 L  +1.0) LCB   26.53c P 18.03% WF 375.1 PSV     377 N     130  --  D16 Q4 D4 F17 R3 R4 Q3 P4
+C3  : T  29.89c W  30.05c S   0.07c ( +1.6 L  +0.9) LCB    0.80c P  1.11% WF  21.5 PSV      18 N       7  --  C3 Q4 D17
+D17 : T  27.02c W  30.16c S   0.04c ( +1.6 L  +0.9) LCB    0.97c P  1.38% WF  12.1 PSV      10 N       4  --  D17 Q4 D4 F3 C6 C15 E16
+C17 : T  26.07c W  28.66c S  -0.05c ( +1.5 L  +0.8) LCB    5.39c P  0.48% WF  26.2 PSV       3 N       9  --  C17 D4 Q4 R3 Q3
+C16 : T  18.63c W  23.60c S  -0.60c ( +1.0 L  +0.6) LCB  -56.69c P  1.05% WF   8.8 PSV       3 N       3  --  C16 Q4 D4 E17 R17
+C4  : T  18.94c W  23.46c S  -0.57c ( +1.0 L  +0.6) LCB  -39.71c P  0.96% WF  11.6 PSV       2 N       4  --  C4 E3 D5
+R17 : T  25.13c W  25.54c S  -0.41c ( +1.2 L  +0.6) LCB -324.87c P  0.19% WF   2.8 PSV       1 N       1  --  R17
+E16 : T   4.14c W   6.06c S  -1.92c ( -0.3 L  -0.2) LCB -345.86c P  0.12% WF   2.5 PSV       0 N       1  --  E16
+D5  : T  13.01c W  14.27c S  -1.25c ( +0.4 L  +0.1) LCB -336.99c P  0.12% WF   2.5 PSV       0 N       1  --  D5
+
+2026-06-18 13:21:39+0800: = D4
