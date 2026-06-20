@@ -41,8 +41,6 @@ export async function initDb(): Promise<SqlJsDatabase> {
   db.run('DELETE FROM user_sessions');
   db.run('DELETE FROM active_rooms');
 
-  saveDb();
-
   console.log('[DB] 数据库已初始化');
   return db;
 }

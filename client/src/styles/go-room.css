@@ -15,6 +15,10 @@
 .sgf-right { align-items: flex-start; }
 .sgf-btn { display: block; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; background: rgba(0,0,0,0.12); color: rgba(255,255,255,0.75); cursor: pointer; font-size: 13px; white-space: nowrap; transition: 0.2s; font-family: inherit; text-align: center; min-width: 90px; width: 100%; }
 .sgf-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(220,179,92,0.25); color: #fff; }
+/* 分析回看按钮：无背景无边框 */
+.replay-btn { background: none; border: none; color: #5a3e0a; cursor: pointer; font-size: 14px; padding: 2px 6px; font-family: inherit; }
+.replay-btn:hover { color: #3d2a0a; }
+.replay-btn:disabled { color: #b8a07a; cursor: default; }
 .sgf-btn-step { background: rgba(0,0,0,0.2); color: #dcb35c; border-color: rgba(220,179,92,0.15); cursor: default; }
 .sgf-step { font-size: 13px; color: rgba(255,255,255,0.4); text-align: center; }
 .sgf-controls { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; }

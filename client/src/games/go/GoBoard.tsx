@@ -29,6 +29,15 @@ interface GoBoardProps {
   height?: number;
   /** 手数显示：Map<"row,col", number>，传入则在棋子上显示手数 */
   moveNumbers?: Map<string, number> | null;
+  /** 分析数据：候选走法 + 胜率 + 领地覆盖 */
+  analysisData?: {
+    winrate: number;
+    scoreLead: number;
+    topMoves: Array<{ row: number; col: number; winrate: number; scoreLead: number }>;
+    ownership: number[][];
+  } | null;
+  /** 回看模式下禁止点击 */
+  replayMode?: boolean;
 }
 
 const COLORS = {
@@ -45,6 +54,7 @@ const COLORS = {
 
 export default function GoBoard({
   board, boardSize, lastMove, myColor, isMyTurn, onPlace, width = 500, height = 500, moveNumbers = null,
+  analysisData = null, replayMode = false,
 }: GoBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverRef = useRef<{ row: number; col: number } | null>(null);
@@ -206,6 +216,68 @@ export default function GoBoard({
       ctx.fill();
     }
 
+    // 分析数据：领地覆盖
+    if (analysisData?.ownership?.length) {
+      const { ownership } = analysisData;
+      const ownBoardSize = ownership.length;
+      for (let r = 0; r < ownBoardSize; r++) {
+        for (let c = 0; c < ownBoardSize; c++) {
+          const displayR = transformRow(r);
+          const displayC = transformCol(c);
+          const val = ownership[r]?.[c];
+          if (val === undefined || board[r]?.[c]) continue; // 有棋子的位置不覆盖
+
+          const sx = offsetX + displayC * cellSize;
+          const sy = offsetY + displayR * cellSize;
+          // val: -1(黑) ~ 1(白)，转成透明度
+          const alpha = Math.min(Math.abs(val) * 0.6, 0.5);
+          if (Math.abs(val) < 0.1) continue; // 不确定区域不画
+          ctx.fillStyle = val > 0
+            ? `rgba(255,255,255,${alpha})`   // 白方领地
+            : `rgba(0,0,0,${alpha})`;         // 黑方领地
+          ctx.fillRect(sx - cellSize / 2, sy - cellSize / 2, cellSize, cellSize);
+        }
+      }
+    }
+
+    // 分析数据：候选走法
+    if (analysisData?.topMoves?.length) {
+      const { topMoves } = analysisData;
+      const bestWinrate = topMoves[0]?.winrate || 0;
+      for (let i = 0; i < topMoves.length; i++) {
+        const m = topMoves[i];
+        const displayR = transformRow(m.row);
+        const displayC = transformCol(m.col);
+        const sx = offsetX + displayC * cellSize;
+        const sy = offsetY + displayR * cellSize;
+        const isEmpty = !board[m.row]?.[m.col];
+        if (!isEmpty) continue; // 有棋子的位置不画候选点
+
+        // 画空心圆
+        const radius = cellSize * 0.35;
+        ctx.beginPath();
+        ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+        // 颜色根据胜率：绿(高) → 黄(中) → 红(低)
+        const ratio = bestWinrate > 0 ? Math.min(m.winrate / bestWinrate, 1) : 0.5;
+        const green = Math.min(Math.floor(ratio * 200 + 55), 255);
+        const red = Math.min(Math.floor((1 - ratio) * 200 + 55), 255);
+        ctx.strokeStyle = `rgb(${red},${green},80)`;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 胜率文字
+        const pct = (m.winrate * 100).toFixed(0);
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.max(9, cellSize * 0.28)}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 3;
+        ctx.fillText(`${pct}%`, sx, sy + radius + cellSize * 0.3);
+        ctx.shadowBlur = 0;
+      }
+    }
+
     // 悬停预览
     if (hoverPos && isMyTurn) {
       const hr = transformRow(hoverPos.row);
@@ -221,7 +293,7 @@ export default function GoBoard({
         ctx.fill();
       }
     }
-  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol]);
+  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol, analysisData]);
 
   // 首次渲染 + 每帧动画
   useEffect(() => {
@@ -246,7 +318,7 @@ export default function GoBoard({
     };
 
     const handleClick = (e: MouseEvent) => {
-      if (!isMyTurn) return;
+      if (!isMyTurn || replayMode) return;
       const rect = canvas.getBoundingClientRect();
       const px = e.clientX - rect.left;
       const py = e.clientY - rect.top;

@@ -385,12 +385,22 @@ export class Dispatcher {
           const katagoPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
           if (katagoPlayer && room.gameState.currentTurn === katagoPlayer.color) {
             // 先同步玩家的落子到 KataGo
-            kataGoManager.playMove(room.roomId, player.color as 'black' | 'white', pos).then(() => {
-              this.scheduleKataGoMove(room);
-            }).catch(err => {
-              console.error('[KataGo] 同步落子失败:', err);
-              this.scheduleKataGoMove(room);
-            });
+            const doKataGo = async () => {
+              try {
+                await kataGoManager.playMove(room.roomId, player.color as 'black' | 'white', pos);
+                // 收集分析：人类走完后，从 KataGo 视角分析
+                const stepIdx = room.moveHistory.length - 1;
+                try {
+                  const analysis = await kataGoManager.analyzePosition(room.roomId, katagoPlayer.color as 'black' | 'white');
+                  if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
+                } catch {}
+                this.scheduleKataGoMove(room);
+              } catch (err) {
+                console.error('[KataGo] 同步落子失败:', err);
+                this.scheduleKataGoMove(room);
+              }
+            };
+            doKataGo();
           }
         } else {
           // 内置 AI 对弈
@@ -421,12 +431,22 @@ export class Dispatcher {
     if ((room as any)._katagoGame) {
       const katagoPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
       if (katagoPlayer && room.gameState.currentTurn === katagoPlayer.color) {
-        kataGoManager.passMove(room.roomId, player.color as 'black' | 'white').then(() => {
-          this.scheduleKataGoMove(room);
-        }).catch(err => {
-          console.error('[KataGo] 同步 pass 失败:', err);
-          this.scheduleKataGoMove(room);
-        });
+        const doPass = async () => {
+          try {
+            await kataGoManager.passMove(room.roomId, player.color as 'black' | 'white');
+            // 收集分析：玩家 pass 后，从 KataGo 视角分析
+            try {
+              const stepIdx = room.moveHistory.length;
+              const analysis = await kataGoManager.analyzePosition(room.roomId, katagoPlayer.color as 'black' | 'white');
+              if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
+            } catch {}
+            this.scheduleKataGoMove(room);
+          } catch (err) {
+            console.error('[KataGo] 同步 pass 失败:', err);
+            this.scheduleKataGoMove(room);
+          }
+        };
+        doPass();
       }
     }
 
@@ -434,7 +454,10 @@ export class Dispatcher {
       if (result && room.gameState) {
         this.enrichGameResult(room, result);
         room.gameState.phase = GamePhase.Finished;
-      if ((room as any)._katagoGame) kataGoManager.destroySession(room.roomId);
+      if ((room as any)._katagoGame) {
+        kataGoManager.destroySession(room.roomId);
+        this.sendKatagoAnalysisReport(room);
+      }
       this.saveGameRecord(room, result);
       room.broadcast({
         type: 'game_over',
@@ -492,6 +515,7 @@ export class Dispatcher {
             room.gameState.phase = GamePhase.Finished;
             kataGoManager.destroySession(room.roomId);
             this.saveGameRecord(room, result);
+            this.sendKatagoAnalysisReport(room);
             room.broadcast({
               type: 'game_over',
               payload: { result, gameState: room.gameState, message: '🤖 KataGo 同意终局数子' },
@@ -507,6 +531,7 @@ export class Dispatcher {
             room.gameState.phase = GamePhase.Finished;
             kataGoManager.destroySession(room.roomId);
             this.saveGameRecord(room, manualResult);
+            this.sendKatagoAnalysisReport(room);
             room.broadcast({
               type: 'game_over',
               payload: { result: manualResult, gameState: room.gameState, message: '🤖 KataGo 同意终局数子' },
@@ -519,6 +544,7 @@ export class Dispatcher {
           room.gameState.phase = GamePhase.Finished;
           kataGoManager.destroySession(room.roomId);
           this.saveGameRecord(room, result);
+          this.sendKatagoAnalysisReport(room);
           room.broadcast({
             type: 'game_over',
             payload: { result, gameState: room.gameState, message: '🤖 KataGo 投子认负' },
@@ -540,6 +566,7 @@ export class Dispatcher {
             room.gameState.phase = GamePhase.Finished;
             kataGoManager.destroySession(room.roomId);
             this.saveGameRecord(room, result);
+            this.sendKatagoAnalysisReport(room);
             room.broadcast({
               type: 'game_over',
               payload: { result, gameState: room.gameState },
@@ -706,7 +733,10 @@ export class Dispatcher {
 
     this.enrichGameResult(room, result);
     room.gameState.phase = GamePhase.Finished;
-    if ((room as any)._katagoGame) kataGoManager.destroySession(room.roomId);
+    if ((room as any)._katagoGame) {
+      this.sendKatagoAnalysisReport(room);
+      kataGoManager.destroySession(room.roomId);
+    }
     this.saveGameRecord(room, result);
 
     room.broadcast({
@@ -935,6 +965,7 @@ export class Dispatcher {
         const engine = this.getEngine(room.gameType, config);
         room.gameState = engine.createInitialState(config, []);
         room.moveHistory = [];
+        room.katagoAnalysis = new Map();
         room.activity = RoomActivity.Playing;
         this.logRoomActivity(room, 2);
         saveActiveRoom(room.roomId, room.owner?.id || '', room.owner?.username || '',
@@ -1022,6 +1053,7 @@ export class Dispatcher {
           room.gameState.phase = GamePhase.Finished;
           kataGoManager.destroySession(room.roomId);
           this.saveGameRecord(room, result);
+          this.sendKatagoAnalysisReport(room);
           room.broadcast({
             type: 'game_over',
             payload: { result, gameState: room.gameState, message: '🤖 KataGo 投子认负' },
@@ -1033,13 +1065,30 @@ export class Dispatcher {
             room.moveHistory.push({ color: aiPlayer.color, row: move.row, col: move.col, at: Date.now() });
             room.gameState = engine.applyMove(room.gameState, move, aiPlayer.color);
             this.updateClock(room, aiPlayer.color);
+            // 收集分析数据：KataGo 走完后，从当前走棋方（人类）的视角分析
+            const stepIdx = room.moveHistory.length - 1;
+            const nextColor = room.gameState.currentTurn;
+            try {
+              const analysis = await kataGoManager.analyzePosition(room.roomId, nextColor as 'black' | 'white');
+              if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
+            } catch {}
           } else {
             // 验证失败，尝试 pass
             room.gameState = engine.handlePass(room.gameState, aiPlayer.color);
+            // pass 后也收集分析
+            try {
+              const analysis = await kataGoManager.analyzePosition(room.roomId, room.gameState.currentTurn as 'black' | 'white');
+              if (analysis) room.katagoAnalysis.set(room.moveHistory.length, analysis);
+            } catch {}
           }
         } else {
           // 无效响应，pass
           room.gameState = engine.handlePass(room.gameState, aiPlayer.color);
+          // pass 后也收集分析
+          try {
+            const analysis = await kataGoManager.analyzePosition(room.roomId, room.gameState.currentTurn as 'black' | 'white');
+            if (analysis) room.katagoAnalysis.set(room.moveHistory.length, analysis);
+          } catch {}
         }
 
         // 检查终局
@@ -1049,6 +1098,8 @@ export class Dispatcher {
           room.gameState.phase = GamePhase.Finished;
           kataGoManager.destroySession(room.roomId);
           this.saveGameRecord(room, result);
+          // 发送分析报告给对弈者（单播）
+          this.sendKatagoAnalysisReport(room);
           room.broadcast({
             type: 'game_over',
             payload: { result, gameState: room.gameState },
@@ -1069,6 +1120,35 @@ export class Dispatcher {
         });
       }
     }, 500); // 短暂延迟，让 UI 先更新
+  }
+
+  /** 发送 KataGo 分析报告给对弈玩家（单播，不广播给观战者） */
+  private sendKatagoAnalysisReport(room: Room): void {
+    if (!(room as any)._katagoGame) return;
+    const analysisData: Record<string, any> = {};
+    for (const [step, point] of room.katagoAnalysis) {
+      analysisData[String(step)] = point;
+    }
+    if (Object.keys(analysisData).length === 0) return;
+
+    const report = {
+      type: 'katago_analysis_report',
+      payload: {
+        analysisData,
+        moveHistory: room.moveHistory,
+        boardSize: (room as any)._katagoBoardSize || 19,
+        result: room.gameState ? {
+          winner: room.gameState.currentTurn === 'black' ? 'white' : 'black', // simplified
+        } : null,
+      },
+    };
+
+    // 只发给对弈者（非 AI、非观战）
+    for (const p of room.players) {
+      if (p.ws && p.ws.readyState === WebSocket.OPEN && !p.id.startsWith('ai-')) {
+        p.ws.send(JSON.stringify(report));
+      }
+    }
   }
 
   /** 安排 AI 走棋（1.5 秒延迟，模拟思考） */

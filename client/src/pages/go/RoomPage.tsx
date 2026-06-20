@@ -10,6 +10,7 @@ import { getGameResultText } from '../../utils/gameResult';
 import { useFavicon } from '../../hooks/useFavicon';
 import { modalConfirm } from '../../components/Modal';
 import Dropdown from '../../components/Dropdown';
+import LineChart from '../../components/LineChart';
 import '../../styles/go-room.css';
 
 /** 格式化毫秒为 MM:SS */
@@ -33,12 +34,16 @@ export default function GoRoomPage() {
     requestRematch, exitAfterGame, sendGuessNumber, sendGuessChoice,
     startKatagoGame,
     clock,
+    katagoAnalysisReport,
   } = useRoom();
 
   const [chatText, setChatText] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const [boardPx, setBoardPx] = useState({ w: 560, h: 560 });
+  // 分析回看状态
+  const [replayMode, setReplayMode] = useState(false);
+  const [replayStep, setReplayStep] = useState(0);
   // 棋钟：追踪当前走棋方的开始时间和上一步的步时
   const moveStartRef = useRef(Date.now());
   const lastMoveTimeRef = useRef(0); // 上一步走棋方的步时（冻结）
@@ -123,6 +128,39 @@ export default function GoRoomPage() {
       lastMove: sgfMoves[sgfStep] ? { row: sgfMoves[sgfStep].row, col: sgfMoves[sgfStep].col } : null,
     };
   }, [sgfMoves, sgfStep]);
+
+  // 分析回看：根据步数重建棋盘
+  const replayBoard = useMemo(() => {
+    if (!katagoAnalysisReport?.moveHistory?.length) return null;
+    const moves = katagoAnalysisReport.moveHistory;
+    const size = katagoAnalysisReport.boardSize || 19;
+    const b: (string | null)[][] = Array.from({ length: size }, () => Array(size).fill(null));
+    // 重建到 replayStep（含）
+    for (let i = 0; i <= replayStep && i < moves.length; i++) {
+      const m = moves[i];
+      if (m.row >= 0 && m.row < size && m.col >= 0 && m.col < size) {
+        b[m.row][m.col] = m.color;
+      }
+    }
+    const last = moves[replayStep];
+    return {
+      board: b,
+      lastMove: last ? { row: last.row, col: last.col } : null,
+    };
+  }, [katagoAnalysisReport, replayStep]);
+
+  // 当前步的分析数据
+  const currentAnalysis = useMemo(() => {
+    if (!katagoAnalysisReport?.analysisData) return null;
+    return katagoAnalysisReport.analysisData[String(replayStep)] || null;
+  }, [katagoAnalysisReport, replayStep]);
+
+  // 进入回看模式时，默认跳到最后一步
+  useEffect(() => {
+    if (replayMode && katagoAnalysisReport?.moveHistory?.length) {
+      setReplayStep(katagoAnalysisReport.moveHistory.length - 1);
+    }
+  }, [replayMode, katagoAnalysisReport]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -314,6 +352,32 @@ export default function GoRoomPage() {
           <div className="sidebar-actions">
             {isOwner && (!gameState || gameState.phase === 'finished') && (
               <>
+                {/* KataGo 分析报告 */}
+                {replayMode && katagoAnalysisReport?.analysisData && (
+                  <div style={{ marginBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 6 }}>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', marginBottom: 2 }}>胜率走势</div>
+                    <LineChart
+                      data={(() => {
+                        const steps = Object.keys(katagoAnalysisReport.analysisData).sort((a, b) => Number(a) - Number(b));
+                        return steps.map((step, i) => {
+                          const pt = katagoAnalysisReport.analysisData[step];
+                          return { label: String(i + 1), value: Math.round((pt.winrate || 0) * 100) };
+                        });
+                      })()}
+                      width={200}
+                      height={120}
+                      highlightIndex={replayStep}
+                    />
+                  </div>
+                )}
+                {katagoAnalysisReport && (
+                  <button className="btn-sidebar" style={{
+                    background: replayMode ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #2a4a7a, #1a3050)',
+                    border: replayMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(100,150,255,0.3)',
+                  }} onClick={() => setReplayMode(!replayMode)}>
+                    {replayMode ? '📊 收起报告' : '📊 查看报告'}
+                  </button>
+                )}
                 {/* 与 KataGo 对弈 */}
                 <button className="btn-sidebar" style={{ whiteSpace: 'nowrap', background: 'linear-gradient(135deg, #1a6b37, #0d4a25)', border: '1px solid rgba(76,175,80,0.3)' }} onClick={() => setShowKatagoConfig(true)}>
                   🤖 与KataGo对弈
@@ -414,6 +478,42 @@ export default function GoRoomPage() {
           </div>
       </aside>
 
+      {/* 回看模式：候选走法列表 */}
+      {replayMode && currentAnalysis?.topMoves?.length > 0 && (
+        <div style={{
+          position: 'fixed', left: 16, top: 100, zIndex: 100,
+          background: 'rgba(20,20,40,0.92)', backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+          padding: '10px 14px', minWidth: 170, fontSize: 12,
+        }}>
+          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginBottom: 8 }}>候选走法</div>
+          {currentAnalysis.topMoves.map((m: any, i: number) => {
+            const pct = (m.winrate * 100).toFixed(1);
+            const lead = m.scoreLead;
+            const bestPct = currentAnalysis.topMoves[0]?.winrate ? (currentAnalysis.topMoves[0].winrate * 100).toFixed(1) : '0';
+            return (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0',
+                borderBottom: i < currentAnalysis.topMoves.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              }}>
+                <span style={{ color: i === 0 ? '#4caf50' : i === 1 ? '#ffa726' : i === 2 ? '#ef5350' : 'rgba(255,255,255,0.4)', fontWeight: 700, width: 16 }}>
+                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i+1}.`}
+                </span>
+                <span style={{ color: '#fff', fontFamily: 'monospace', width: 36 }}>
+                  {String.fromCharCode(65 + (m.col >= 8 ? m.col + 1 : m.col))}{19 - m.row}
+                </span>
+                <span style={{ color: '#4caf50', fontVariantNumeric: 'tabular-nums', width: 48, textAlign: 'right' }}>
+                  {pct}%
+                </span>
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>
+                  {lead > 0 ? `+${lead.toFixed(1)}` : lead.toFixed(1)}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <main className="room-board" ref={boardContainerRef}>
         {sgfMode ? (
           <div style={{ textAlign: 'center', overflow: 'auto', maxHeight: '100%', width: '100%' }}>
@@ -459,6 +559,40 @@ export default function GoRoomPage() {
               </div>
             )}
           </div>
+        ) : replayMode && replayBoard ? (
+          <>
+            <GoBoard
+              board={replayBoard.board}
+              boardSize={replayBoard.board?.length || 19}
+              lastMove={replayBoard.lastMove}
+              myColor={myColor}
+              isMyTurn={false}
+              onPlace={() => {}}
+              width={boardPx.w}
+              height={boardPx.h}
+              replayMode={true}
+              analysisData={currentAnalysis}
+            />
+            <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+                <button className="replay-btn" onClick={() => setReplayStep(Math.max(0, replayStep - 1))}
+                  disabled={replayStep <= 0}>⏮上一步</button>
+                <span style={{ color: '#4caf50', fontSize: 14, fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+                  步数 {replayStep + 1}/{katagoAnalysisReport?.moveHistory?.length || 0}
+                </span>
+                <button className="replay-btn" onClick={() => setReplayStep(Math.min(
+                  (katagoAnalysisReport?.moveHistory?.length || 1) - 1, replayStep + 1))}
+                  disabled={replayStep >= (katagoAnalysisReport?.moveHistory?.length || 1) - 1}>下一步⏭</button>
+                {currentAnalysis && (
+                  <span style={{ color: '#4caf50', fontSize: 14, marginLeft: 4, fontWeight: 600 }}>
+                    胜率 {currentAnalysis.winrate ? (currentAnalysis.winrate * 100).toFixed(1) + '%' : '--'}
+                    {currentAnalysis.scoreLead !== undefined && ` · ${currentAnalysis.scoreLead > 0 ? '+' : ''}${currentAnalysis.scoreLead.toFixed(1)}目`}
+                  </span>
+                )}
+                <button className="replay-btn" onClick={() => setReplayMode(false)}>✕</button>
+              </div>
+            </div>
+          </>
         ) : !gameState ? (
           <div style={{ textAlign: 'center' }}>
             <GoBoard

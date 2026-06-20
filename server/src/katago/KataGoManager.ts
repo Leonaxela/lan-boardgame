@@ -20,6 +20,18 @@ export interface KataGoConfig {
   maxVisits: number;       // 500, 1000, 2000
 }
 
+/** 单步分析数据 */
+export interface AnalysisPoint {
+  /** 胜率 (0~1)，当前走棋方的视角 */
+  winrate: number;
+  /** 领先目数（正 = 当前走棋方领先） */
+  scoreLead: number;
+  /** Top N 候选走法 */
+  topMoves: Array<{ row: number; col: number; winrate: number; scoreLead: number }>;
+  /** 领地预测 board[row][col]，-1(白)→1(黑) */
+  ownership: number[][];
+}
+
 interface KataGoSession {
   process: ChildProcess;
   config: KataGoConfig;
@@ -279,6 +291,109 @@ export class KataGoManager {
   /** 让 KataGo pass */
   async passMove(roomId: string, color: 'black' | 'white'): Promise<void> {
     await this.sendCommand(roomId, `play ${color} pass`, 5000);
+  }
+
+  /** 获取当前局面的分析数据（kata-raw-nn，纯 NN 评估，非常快） */
+  async analyzePosition(roomId: string, perspective: 'black' | 'white' = 'black'): Promise<AnalysisPoint | null> {
+    const session = this.sessions.get(roomId);
+    if (!session) return null;
+
+    try {
+      const response = await this.sendCommand(roomId, 'kata-raw-nn 0', 10000);
+      return this.parseRawNN(response, session.config.boardSize, perspective);
+    } catch (err) {
+      console.error('[KataGo] analyzePosition 错误:', err);
+      return null;
+    }
+  }
+
+  /** 解析 kata-raw-nn 响应 */
+  private parseRawNN(response: string, boardSize: number, perspective: 'black' | 'white'): AnalysisPoint | null {
+    try {
+      // 格式: symmetry 0 whiteWin <float> whiteLoss <float> ... policy <N floats> ... whiteOwnership <N floats>
+      const tokens = response.trim().split(/\s+/);
+      if (tokens.length < 10) return null;
+
+      const data: Record<string, any> = {};
+      let i = 0;
+      while (i < tokens.length) {
+        const key = tokens[i++];
+        if (key === 'symmetry') { i++; continue; } // skip symmetry number
+        // 特殊处理：已知是 N 个 float 的 key
+        if (key === 'policy' || key === 'whiteOwnership' || key === 'whiteScoreSelfplay' || key === 'whiteScoreSelfplaySq') {
+          continue; // skip large arrays for now, we'll handle separately
+        }
+        if (i < tokens.length) {
+          const val = parseFloat(tokens[i]);
+          if (!isNaN(val)) {
+            data[key] = val;
+            i++;
+          }
+        }
+      }
+
+      // 提取 whiteWin/whiteLoss → 转成指定视角的胜率
+      const whiteWin = data['whiteWin'] ?? 0.5;
+      const whiteLoss = data['whiteLoss'] ?? 0.5;
+      const whiteLead = data['whiteLead'] ?? 0;
+      
+      // kata-raw-nn 的 whiteWin/whiteLoss 是白方视角
+      // perspective 参数指定了分析结果从谁的角度看
+      let winrate: number;
+      let scoreLead: number;
+      if (perspective === 'black') {
+        winrate = whiteLoss / (whiteWin + whiteLoss || 1);
+        scoreLead = -whiteLead;
+      } else {
+        winrate = whiteWin / (whiteWin + whiteLoss || 1);
+        scoreLead = whiteLead;
+      }
+
+      // 解析 policy（候选走法）：找到 policy 关键字后的 boardSize*boardSize 个 float
+      const policyIdx = tokens.indexOf('policy');
+      let topMoves: Array<{ row: number; col: number; winrate: number; scoreLead: number }> = [];
+      if (policyIdx >= 0) {
+        const numCells = boardSize * boardSize;
+        const policyValues: number[] = [];
+        for (let j = policyIdx + 1; j < policyIdx + 1 + numCells && j < tokens.length; j++) {
+          policyValues.push(parseFloat(tokens[j]) || 0);
+        }
+        // 取 Top 5
+        const indexed = policyValues.map((v, idx) => ({ row: Math.floor(idx / boardSize), col: idx % boardSize, value: v }));
+        indexed.sort((a, b) => b.value - a.value);
+        topMoves = indexed.slice(0, 5).map(m => ({
+          row: m.row,
+          col: m.col,
+          winrate: m.value,
+          scoreLead,
+        }));
+      }
+
+      // 解析 whiteOwnership
+      const ownIdx = tokens.indexOf('whiteOwnership');
+      let ownership: number[][] = [];
+      if (ownIdx >= 0) {
+        const numCells = boardSize * boardSize;
+        for (let j = ownIdx + 1; j < ownIdx + 1 + numCells && j < tokens.length; j++) {
+          const val = parseFloat(tokens[j]) || 0;
+          const idx = j - ownIdx - 1;
+          const r = Math.floor(idx / boardSize);
+          const c = idx % boardSize;
+          if (!ownership[r]) ownership[r] = [];
+          ownership[r][c] = val; // -1 (black) to 1 (white)
+        }
+      }
+
+      return {
+        winrate,
+        scoreLead: whiteLead,
+        topMoves,
+        ownership,
+      };
+    } catch (err) {
+      console.error('[KataGo] parseRawNN 错误:', err);
+      return null;
+    }
   }
 
   /** 销毁房间的 KataGo 会话 */

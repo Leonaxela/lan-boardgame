@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import { GameType, GameConfig, GameState, Position } from '@lan-boardgame/shared';
+import type { AnalysisPoint } from '../katago/KataGoManager.js';
 
 // ── 玩家在房间中的连接 ──
 export interface RoomPlayer {
@@ -47,6 +48,8 @@ export class Room {
   challenge: ChallengeState | null = null;
   /** 对局走棋记录 */
   moveHistory: { color: string; row: number; col: number; at: number; fromRow?: number; fromCol?: number }[] = [];
+  /** KataGo 分析数据（临时，仅围棋 KataGo 对弈使用）key=步数 index, value=分析 */
+  katagoAnalysis: Map<number, AnalysisPoint> = new Map();
   createdAt: number;
   /** 游戏开始时间戳（仅围棋使用） */
   gameStartedAt: number | null = null;

@@ -51,6 +51,9 @@ export function useRoom() {
   const [guessFirstResult, setGuessFirstResult] = useState<any>(null);
   const [guessFirstChallenger, setGuessFirstChallenger] = useState('');
 
+  // KataGo 分析报告
+  const [katagoAnalysisReport, setKatagoAnalysisReport] = useState<any>(null);
+
   const createRoom = useCallback((gameType: string, username: string) => {
     wsClient.send('create_room', {
       gameType, username,
@@ -103,7 +106,7 @@ export function useRoom() {
     unsubs.push(wsClient.on('room_updated', (p) => { setRoom(p.room); if (p.room?.gameState) setGameState(p.room.gameState); else setGameState(null); const me = p.room?.players?.find((pl: any) => pl.id === myIdRef.current); if (me) setMyColor(me.color); }));
 
     unsubs.push(wsClient.on('room_destroyed', (p) => {
-      setRoom(null); setMyIdAndRef(null); setGameState(null); setGameResult(null); localStorage.removeItem('rejoin_room');
+      setRoom(null); setMyIdAndRef(null); setGameState(null); setGameResult(null); setKatagoAnalysisReport(null); localStorage.removeItem('rejoin_room');
       if (window.location.pathname.startsWith('/room/')) {
         window.location.href = '/';
       }
@@ -116,6 +119,7 @@ export function useRoom() {
       setRematchState(null);
       setChallengeState(null);
       setChallengeChallenger('');
+      setKatagoAnalysisReport(null); // 新对局清空分析报告
       // 从 game_started 重建房间状态
       if (p.players && p.gameState) {
         setRoom((prev: any) => {
@@ -181,6 +185,11 @@ export function useRoom() {
 
     unsubs.push(wsClient.on('error', (p) => { modalAlert(`错误：${p.message}`); }));
 
+    // KataGo 分析报告（仅对弈者收到）
+    unsubs.push(wsClient.on('katago_analysis_report', (p) => {
+      setKatagoAnalysisReport(p);
+    }));
+
     return () => unsubs.forEach(fn => fn());
   }, []);
 
@@ -207,5 +216,6 @@ export function useRoom() {
     sendGuessNumber, sendGuessChoice, sendRpsChoice,
     startKatagoGame,
     clock: gameState?.clock || null,
+    katagoAnalysisReport,
   };
 }

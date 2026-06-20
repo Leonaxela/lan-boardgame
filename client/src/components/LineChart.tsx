@@ -3,10 +3,10 @@ interface Point {
   value: number;
 }
 
-export default function LineChart({ data, width = 500, height = 220 }: { data: Point[]; width?: number; height?: number }) {
+export default function LineChart({ data, width = 500, height = 220, highlightIndex }: { data: Point[]; width?: number; height?: number; highlightIndex?: number }) {
   if (data.length === 0) return <p style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>暂无数据</p>;
 
-  const pad = { top: 24, right: 16, bottom: 32, left: 50 };
+  const pad = { top: 24, right: 8, bottom: width < 250 ? 20 : 32, left: width < 250 ? 30 : 50 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
 
@@ -59,17 +59,32 @@ export default function LineChart({ data, width = 500, height = 220 }: { data: P
       <path d={areaPath} fill="url(#areaGrad)" />
       <path d={linePath} fill="none" stroke="#dcb35c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-      {points.map((p, i) => (
+      {points.map((p, i) => {
+        // 数据点太多时稀疏显示标签，保证间隔约 40px
+        const labelStep = Math.max(1, Math.floor(data.length / (chartW / 40)));
+        const showLabel = i % labelStep === 0 || i === data.length - 1 || i === highlightIndex;
+        return (
         <g key={i}>
-          <circle cx={p.x} cy={p.y} r="4" fill="#1a1a2e" stroke="#dcb35c" strokeWidth="2.5" />
-          <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#dcb35c" fontSize="11" fontWeight="600">
-            {p.value}
-          </text>
-          <text x={p.x} y={pad.top + chartH + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11">
-            {p.label}
-          </text>
+          {i === highlightIndex ? (
+            <>
+              <circle cx={p.x} cy={p.y} r="8" fill="#1a1a2e" stroke="#ff6b6b" strokeWidth="3" />
+              <circle cx={p.x} cy={p.y} r="3" fill="#ff6b6b" />
+            </>
+          ) : (
+            <circle cx={p.x} cy={p.y} r="4" fill="#1a1a2e" stroke="#dcb35c" strokeWidth="2.5" />
+          )}
+          {showLabel && (
+            <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#dcb35c" fontSize="11" fontWeight="600">
+              {p.value}
+            </text>
+          )}
+          {showLabel && (
+            <text x={p.x} y={pad.top + chartH + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11">
+              {p.label}
+            </text>
+          )}
         </g>
-      ))}
+      );})}
     </svg>
   );
 }
