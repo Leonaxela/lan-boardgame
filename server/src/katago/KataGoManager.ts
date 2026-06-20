@@ -125,7 +125,7 @@ export class KataGoManager {
       }
 
       // 检测 GTP 模式启动（非调优场景）
-      if (!tuningDetected && (text.includes('GTP') || text.includes('engine'))) {
+      if (!tuningDetected && (text.includes('GTP ready') || text.includes('beginning main protocol'))) {
         const s = this.sessions.get(roomId);
         if (s?.readyResolve) {
           const resolve = s.readyResolve;

@@ -1,3 +1,5 @@
 node_modules/
 *.bin.gz
 client/dist/
+.reasonix/
+server/katago/**/gtp_logs/
