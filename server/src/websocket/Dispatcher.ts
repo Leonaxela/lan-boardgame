@@ -233,7 +233,7 @@ export class Dispatcher {
     removeUserSession(player.id);
     if (player.isOwner) {
       // 房主离开 → 销毁房间
-      if ((room as any)._katagoGame) kataGoManager.destroySession(room.roomId);
+      if (room.katagoGame) kataGoManager.destroySession(room.roomId);
       removeActiveRoom(room.roomId);
       logRoomDestroyed(room.roomId);
       room.broadcast({
@@ -276,7 +276,7 @@ export class Dispatcher {
     
     // 过滤掉房主断线待销毁的房间
     const pendingIds = this.wsServer?.pendingDestruction ? 
-      Array.from((this.wsServer as any).pendingDestruction.keys()) : [];
+      Array.from(this.wsServer?.pendingDestruction?.keys() || []) : [];
     rooms = rooms.filter(r => !pendingIds.includes(r.roomId));
 
     // 按游戏类型统计房间数和在线人数
@@ -346,7 +346,7 @@ export class Dispatcher {
     // 记录走棋
     const moveRecord: any = { color: player.color, row: pos.row, col: pos.col, at: Date.now() };
     if (room.gameType === GameType.ChineseChess || room.gameType === GameType.Chess || room.gameType === GameType.Draughts) {
-      const fromPos = (room.gameState.extra as any)?.from;
+      const fromPos = (room.gameState.extra as Record<string, unknown>)?.from as { row: number; col: number } | undefined;
       if (fromPos) {
         moveRecord.fromRow = fromPos.row;
         moveRecord.fromCol = fromPos.col;
@@ -381,7 +381,7 @@ export class Dispatcher {
       const hasAI = room.players.some(p => p.id.startsWith('ai-'));
       if (hasAI) {
         // KataGo 对弈：同步落子到 KataGo 进程，然后让 KataGo 回应
-        if ((room as any)._katagoGame) {
+        if (room.katagoGame) {
           const katagoPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
           if (katagoPlayer && room.gameState.currentTurn === katagoPlayer.color) {
             // 先同步玩家的落子到 KataGo
@@ -393,7 +393,9 @@ export class Dispatcher {
                 try {
                   const analysis = await kataGoManager.analyzePosition(room.roomId, katagoPlayer.color as 'black' | 'white');
                   if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
-                } catch {}
+                } catch (e) {
+                  console.error('[KataGo] 分析失败:', e);
+                }
                 this.scheduleKataGoMove(room);
               } catch (err) {
                 console.error('[KataGo] 同步落子失败:', err);
@@ -428,7 +430,7 @@ export class Dispatcher {
     room.gameState = engine.handlePass(room.gameState, player.color);
 
     // KataGo 对弈：同步 pass 到 KataGo 进程
-    if ((room as any)._katagoGame) {
+    if (room.katagoGame) {
       const katagoPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
       if (katagoPlayer && room.gameState.currentTurn === katagoPlayer.color) {
         const doPass = async () => {
@@ -439,7 +441,9 @@ export class Dispatcher {
               const stepIdx = room.moveHistory.length;
               const analysis = await kataGoManager.analyzePosition(room.roomId, katagoPlayer.color as 'black' | 'white');
               if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
-            } catch {}
+            } catch (e) {
+              console.error('[KataGo] 分析失败:', e);
+            }
             this.scheduleKataGoMove(room);
           } catch (err) {
             console.error('[KataGo] 同步 pass 失败:', err);
@@ -454,7 +458,7 @@ export class Dispatcher {
       if (result && room.gameState) {
         this.enrichGameResult(room, result);
         room.gameState.phase = GamePhase.Finished;
-      if ((room as any)._katagoGame) {
+      if (room.katagoGame) {
         kataGoManager.destroySession(room.roomId);
         this.sendKatagoAnalysisReport(room);
       }
@@ -493,7 +497,7 @@ export class Dispatcher {
     const hasAI = room.players.some(p => p.id.startsWith('ai-'));
 
     // KataGo 对弈：让 KataGo 自己决定是否同意终局
-    if ((room as any)._katagoGame) {
+    if (room.katagoGame) {
       const katagoPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
       if (!katagoPlayer) return;
 
@@ -604,9 +608,9 @@ export class Dispatcher {
     if (!aiPlayer) return;
 
     // AI 同意条件：连续 pass 已有 1 次，或 AI 认为自己没有好棋
-    const extra = room.gameState.extra as any;
-    const consecutivePasses = extra?.consecutivePasses || 0;
-    const difficulty = (room as any)._aiDifficulty || 2;
+    const extra = room.gameState.extra as Record<string, unknown>;
+    const consecutivePasses = (extra?.consecutivePasses as number) || 0;
+    const difficulty = room.aiDifficulty || 2;
     
     // 简单判断：如果已经 pass 过一次，或难度较低，同意终局
     let agree = false;
@@ -733,7 +737,7 @@ export class Dispatcher {
 
     this.enrichGameResult(room, result);
     room.gameState.phase = GamePhase.Finished;
-    if ((room as any)._katagoGame) {
+    if (room.katagoGame) {
       this.sendKatagoAnalysisReport(room);
       kataGoManager.destroySession(room.roomId);
     }
@@ -749,8 +753,8 @@ export class Dispatcher {
 
   private handleRematch(ws: WebSocket, _msg: ClientMessage, player: RoomPlayer, room: Room): void {
     // 标记该玩家申请再战
-    (room as any)._rematchPlayers = (room as any)._rematchPlayers || [];
-    const rematchPlayers = (room as any)._rematchPlayers as string[];
+    room.rematchPlayers = room.rematchPlayers || [];
+    const rematchPlayers = room.rematchPlayers as string[];
 
     if (!rematchPlayers.includes(player.id)) {
       rematchPlayers.push(player.id);
@@ -781,7 +785,7 @@ export class Dispatcher {
     if (rematchPlayers.length >= humanPlayers.length) {
       // 如果是 AI 对弈且 AI 被移除了，重新添加
       const hasAI = room.players.some(p => p.id.startsWith('ai-'));
-      if (!hasAI && (room as any)._aiDifficulty) {
+      if (!hasAI && room.aiDifficulty) {
         let aiColor: string;
         if (room.gameType === GameType.ChineseChess) aiColor = 'black';
         else if (room.gameType === GameType.Chess) aiColor = 'black';
@@ -792,7 +796,7 @@ export class Dispatcher {
           id: 'ai-' + crypto.randomUUID().slice(0, 8),
           username: '🤖 电脑',
           color: aiColor,
-          ws: null as any,
+          ws: null!,
           isOwner: false,
           joinedAt: Date.now(),
         };
@@ -803,7 +807,7 @@ export class Dispatcher {
       room.gameState = engine.createInitialState(room.config, []);
       room.moveHistory = [];
       room.activity = RoomActivity.Playing;
-      (room as any)._rematchPlayers = [];
+      room.rematchPlayers = [];
       this.logRoomActivity(room, 0);
       saveActiveRoom(room.roomId, room.owner?.id || '', room.owner?.username || '',
         room.gameType, room.config, 'playing', room.players.map(p => p.id));
@@ -822,8 +826,7 @@ export class Dispatcher {
   }
 
   private handleRematchResponse(ws: WebSocket, msg: ClientMessage, player: RoomPlayer, room: Room): void {
-    const roomAny = room as any;
-    roomAny._rematchPlayers = roomAny._rematchPlayers || [];
+    room.rematchPlayers = room.rematchPlayers || [];
 
     // 退出时移除 AI 玩家，人类非房主退回观战
     room.activity = RoomActivity.Idle0;
@@ -907,15 +910,15 @@ export class Dispatcher {
       id: 'ai-' + crypto.randomUUID().slice(0, 8),
       username: '🤖 电脑',
       color: aiColor,
-      ws: null as any,
+      ws: null!,
       isOwner: false,
       joinedAt: Date.now(),
     };
     room.players.push(aiPlayer);
 
     // 存储 AI 难度
-    (room as any)._aiDifficulty = difficulty;
-    (room as any)._aiConsecutivePasses = 0;
+    room.aiDifficulty = difficulty;
+    room.aiConsecutivePasses = 0;
 
     room.broadcast({
       type: 'game_started',
@@ -993,15 +996,15 @@ export class Dispatcher {
           id: 'ai-katago-' + crypto.randomUUID().slice(0, 8),
           username: '🤖 KataGo',
           color: aiColor,
-          ws: null as any,
+          ws: null!,
           isOwner: false,
           joinedAt: Date.now(),
         };
         room.players.push(aiPlayer);
 
         // 标记为 KataGo 对弈
-        (room as any)._katagoGame = true;
-        (room as any)._katagoBoardSize = boardSize;
+        room.katagoGame = true;
+        room.katagoBoardSize = boardSize;
 
         room.broadcast({
           type: 'game_started',
@@ -1031,14 +1034,14 @@ export class Dispatcher {
   private scheduleKataGoMove(room: Room): void {
     setTimeout(async () => {
       if (!room.gameState || room.gameState.phase !== GamePhase.Playing) return;
-      if (!(room as any)._katagoGame) return;
+      if (!room.katagoGame) return;
 
       const aiPlayer = room.players.find(p => p.id.startsWith('ai-katago'));
       if (!aiPlayer) return;
       if (room.gameState.currentTurn !== aiPlayer.color) return;
 
       const engine = this.getEngine(room.gameType, room.config);
-      const boardSize = (room as any)._katagoBoardSize || 19;
+      const boardSize = room.katagoBoardSize || 19;
 
       try {
         const move = await kataGoManager.genMove(room.roomId, aiPlayer.color as 'black' | 'white');
@@ -1071,7 +1074,9 @@ export class Dispatcher {
             try {
               const analysis = await kataGoManager.analyzePosition(room.roomId, nextColor as 'black' | 'white');
               if (analysis) room.katagoAnalysis.set(stepIdx, analysis);
-            } catch {}
+            } catch (e) {
+              console.error('[KataGo] 分析失败:', e);
+            }
           } else {
             // 验证失败，尝试 pass
             room.gameState = engine.handlePass(room.gameState, aiPlayer.color);
@@ -1079,7 +1084,9 @@ export class Dispatcher {
             try {
               const analysis = await kataGoManager.analyzePosition(room.roomId, room.gameState.currentTurn as 'black' | 'white');
               if (analysis) room.katagoAnalysis.set(room.moveHistory.length, analysis);
-            } catch {}
+            } catch (e) {
+              console.error('[KataGo] 分析失败:', e);
+            }
           }
         } else {
           // 无效响应，pass
@@ -1088,7 +1095,9 @@ export class Dispatcher {
           try {
             const analysis = await kataGoManager.analyzePosition(room.roomId, room.gameState.currentTurn as 'black' | 'white');
             if (analysis) room.katagoAnalysis.set(room.moveHistory.length, analysis);
-          } catch {}
+          } catch (e) {
+            console.error('[KataGo] 分析失败:', e);
+          }
         }
 
         // 检查终局
@@ -1124,7 +1133,7 @@ export class Dispatcher {
 
   /** 发送 KataGo 分析报告给对弈玩家（单播，不广播给观战者） */
   private sendKatagoAnalysisReport(room: Room): void {
-    if (!(room as any)._katagoGame) return;
+    if (!room.katagoGame) return;
     const analysisData: Record<string, any> = {};
     for (const [step, point] of room.katagoAnalysis) {
       analysisData[String(step)] = point;
@@ -1136,7 +1145,7 @@ export class Dispatcher {
       payload: {
         analysisData,
         moveHistory: room.moveHistory,
-        boardSize: (room as any)._katagoBoardSize || 19,
+        boardSize: room.katagoBoardSize || 19,
         result: room.gameState ? {
           winner: room.gameState.currentTurn === 'black' ? 'white' : 'black', // simplified
         } : null,
@@ -1172,7 +1181,7 @@ export class Dispatcher {
 
       if (room.gameType === GameType.ChineseChess || room.gameType === GameType.Chess || room.gameType === GameType.Draughts) {
         // 中国象棋/国际象棋/国际跳棋 AI 返回 { from, to }
-        const difficulty = (room as any)._aiDifficulty || 3;
+        const difficulty = room.aiDifficulty || 3;
         const moveResult = room.gameType === GameType.ChineseChess
           ? selectChineseChessAIMove(room.gameState, aiColor, difficulty)
           : room.gameType === GameType.Chess
@@ -1193,7 +1202,7 @@ export class Dispatcher {
           this.updateClock(room, aiColor);
         }
       } else {
-        const difficulty = (room as any)._aiDifficulty || 2;
+        const difficulty = room.aiDifficulty || 2;
         const move = room.gameType === GameType.Gomoku
           ? selectGomokuAIMove(room.gameState, aiColor, difficulty)
           : selectAIMove(room.gameState, aiColor, difficulty);
@@ -1201,24 +1210,24 @@ export class Dispatcher {
         if (move === null) {
           room.gameState = engine.handlePass(room.gameState, aiColor);
           // AI 连续 pass 计数
-          (room as any)._aiConsecutivePasses = ((room as any)._aiConsecutivePasses || 0) + 1;
+          room.aiConsecutivePasses = (room.aiConsecutivePasses || 0) + 1;
         } else {
           const validation = engine.validateMove(room.gameState, move, aiColor);
           if (!validation.valid) {
             room.gameState = engine.handlePass(room.gameState, aiColor);
-            (room as any)._aiConsecutivePasses = ((room as any)._aiConsecutivePasses || 0) + 1;
+            room.aiConsecutivePasses = (room.aiConsecutivePasses || 0) + 1;
           } else {
             room.moveHistory.push({ color: aiColor, row: move.row, col: move.col, at: Date.now() });
             room.gameState = engine.applyMove(room.gameState, move, aiColor);
             this.updateClock(room, aiColor);
-            (room as any)._aiConsecutivePasses = 0;
+            room.aiConsecutivePasses = 0;
           }
         }
       }
 
       // AI 连续 pass 2 次 → 自动终局数子
-      if ((room as any)._aiConsecutivePasses >= 2) {
-        (room as any)._aiConsecutivePasses = 0;
+      if (room.aiConsecutivePasses >= 2) {
+        room.aiConsecutivePasses = 0;
         room.broadcast({
           type: 'game_state',
           payload: { gameState: room.gameState, message: '🤖 电脑已放弃，对局结束' },
@@ -1311,10 +1320,10 @@ export class Dispatcher {
           payload: { message: '申请超时，已自动取消' },
         }));
         room.challenge = null;
-        (room as any)._challengeTimer = null;
+        room.challengeTimer = null;
       }
     }, 60000);
-    (room as any)._challengeTimer = challengeTimer;
+    room.challengeTimer = challengeTimer;
 
     // 通知房主
     room.sendTo(room.owner!.id, {
@@ -1345,9 +1354,9 @@ export class Dispatcher {
 
     const accepted = msg.payload.accepted as boolean;
     // 清除超时定时器
-    if ((room as any)._challengeTimer) {
-      clearTimeout((room as any)._challengeTimer);
-      (room as any)._challengeTimer = null;
+    if (room.challengeTimer) {
+      clearTimeout(room.challengeTimer);
+      room.challengeTimer = null;
     }
     const challenger = room.getAllPlayers().find(p => p.id === room.challenge!.challengerId);
 
@@ -1367,7 +1376,7 @@ export class Dispatcher {
       room.activity = RoomActivity.Playing;
 
       // 进入猜先阶段
-      (room as any)._guessFirst = {
+      room.guessFirst = {
         challengerId: challenger.id,
         number: null,
         choice: null,
@@ -1422,7 +1431,7 @@ export class Dispatcher {
   // ── 猜先系统 ──
 
   private handleGuessFirstNumber(ws: WebSocket, msg: ClientMessage, player: RoomPlayer, room: Room): void {
-    const gf = (room as any)._guessFirst;
+    const gf = room.guessFirst;
     if (!gf || gf.phase !== 'waiting_number') {
       this.sendError(ws, 'INVALID_PHASE', '当前不是猜先阶段');
       return;
@@ -1468,7 +1477,7 @@ export class Dispatcher {
   }
 
   private handleGuessFirstChoice(ws: WebSocket, msg: ClientMessage, player: RoomPlayer, room: Room): void {
-    const gf = (room as any)._guessFirst;
+    const gf = room.guessFirst;
     if (!gf || gf.phase !== 'waiting_choice') {
       this.sendError(ws, 'INVALID_PHASE', '当前不是猜先阶段');
       return;
@@ -1491,7 +1500,7 @@ export class Dispatcher {
         return;
       }
 
-      const rps = gf.number; // challenger 的选择
+      const rps = gf.number as string; // challenger 的选择
       const rpsNames: Record<string, string> = { rock: '石头', scissors: '剪刀', paper: '布' };
 
       // 判断输赢
@@ -1561,7 +1570,7 @@ export class Dispatcher {
     if (challenger) challenger.color = challengerColor;
     if (room.owner) room.owner.color = ownerColor;
 
-    (room as any)._guessFirst = null;
+    room.guessFirst = null;
 
     setTimeout(() => {
       this.startPvpGame(room);
@@ -1758,13 +1767,13 @@ export class Dispatcher {
       // 更新用户统计数据（通过 username 查找真实用户 ID）
       for (const p of players) {
         if (p.id.startsWith('ai-')) continue;
-        const user = queryOne('SELECT id FROM users WHERE username = ?', [p.name]) as any;
+        const user = queryOne('SELECT id FROM users WHERE username = ?', [p.name]) as { id: string } | undefined;
         if (user) {
           execute('UPDATE users SET total_games = total_games + 1 WHERE id = ?', [user.id]);
         }
       }
       if (result?.winner?.id && !result.winner.id.startsWith('ai-')) {
-        const winnerUser = queryOne('SELECT id FROM users WHERE username = ?', [result.winner.name || '']) as any;
+        const winnerUser = queryOne('SELECT id FROM users WHERE username = ?', [result.winner.name || '']) as { id: string } | undefined;
         if (winnerUser) {
           execute('UPDATE users SET win_games = win_games + 1 WHERE id = ?', [winnerUser.id]);
         }
@@ -1783,7 +1792,7 @@ export class Dispatcher {
     let sgf = `(;GM[1]FF[4]CA[UTF-8]SZ[${size}]KM[${komi}]RU[${ruleSet}]`;
 
     // 添加玩家信息
-    const isKatago = !!(room as any)._katagoGame;
+    const isKatago = !!room.katagoGame;
     const players = isKatago
       ? room.players  // KataGo 对弈：显示所有玩家（包括 KataGo）
       : room.players.filter(p => !p.id.startsWith('ai-'));  // 普通 AI：只显示人类
@@ -1848,10 +1857,10 @@ export class Dispatcher {
     const moves = room.moveHistory;
 
     for (let i = 0; i < moves.length; i++) {
-      const m = moves[i] as any;
-      if (m.fromRow === undefined) continue;
+      const m = moves[i];
+      if (m.fromRow === undefined || m.fromCol === undefined) continue;
 
-      const piece = (room.gameState as any)?.board?.[m.row]?.[m.col];
+      const piece = room.gameState?.board?.[m.row]?.[m.col];
       // 从初始棋盘推断棋子类型
       const fromPiece = this.getPieceAtInitialBoard(room, m);
       const pieceType = fromPiece?.replace('red_', '').replace('black_', '') || '';
@@ -1914,13 +1923,13 @@ export class Dispatcher {
     let pgn = '';
 
     for (let i = 0; i < room.moveHistory.length; i++) {
-      const m = room.moveHistory[i] as any;
+      const m = room.moveHistory[i];
       const fromKey = `${m.fromRow},${m.fromCol}`;
       const piece = board[fromKey] || '';
       const pieceType = piece.replace('white_', '').replace('black_', '');
       const letter = PIECE_LETTER[pieceType] || '';
 
-      const from = `${COL[m.fromCol]}${8 - m.fromRow}`;
+      const from = `${COL[m.fromCol!]}${8 - m.fromRow!}`;
       const to = `${COL[m.col]}${8 - m.row}`;
 
       // 吃子检测
@@ -1929,8 +1938,8 @@ export class Dispatcher {
 
       // 王车易位
       let notation: string;
-      if (pieceType === 'king' && Math.abs(m.col - m.fromCol) === 2) {
-        notation = m.col > m.fromCol ? 'O-O' : 'O-O-O';
+      if (pieceType === 'king' && Math.abs(m.col - m.fromCol!) === 2) {
+        notation = m.col > m.fromCol! ? 'O-O' : 'O-O-O';
       } else {
         notation = `${letter}${from}${captureSymbol}${to}`;
       }
@@ -1968,7 +1977,8 @@ export class Dispatcher {
     const moves = room.moveHistory;
 
     for (let i = 0; i < moves.length; i++) {
-      const m = moves[i] as any;
+      const m = moves[i];
+      if (m.fromRow === undefined || m.fromCol === undefined) continue;
       const from = squareNumber(m.fromRow, m.fromCol);
       const to = squareNumber(m.row, m.col);
 
@@ -2020,7 +2030,9 @@ export class Dispatcher {
          VALUES (?, ?, ?, ?, ?, ?, datetime('now', 'localtime'))`,
         [uuid(), room.roomId, room.owner?.id || '', room.gameType, room.players.length, idleType]
       );
-    } catch {}
+    } catch (e) {
+      console.error('[DB] 记录房间活动失败:', e);
+    }
   }
 
   /** 补充游戏结果中赢家和输家的 id 和 name */

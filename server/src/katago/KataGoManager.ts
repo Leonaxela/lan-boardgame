@@ -416,9 +416,13 @@ export class KataGoManager {
           if (!session.process.killed) {
             session.process.kill('SIGKILL');
           }
-        } catch {}
+        } catch (e) {
+          console.error('[KataGo] 强制终止进程失败:', e);
+        }
       }, 2000);
-    } catch {}
+    } catch (e) {
+      console.error('[KataGo] 销毁会话失败:', e);
+    }
 
     this.sessions.delete(roomId);
   }

@@ -46,7 +46,9 @@ export class GameWSServer {
             handleEmojiMessage(ws, msg);
             return;
           }
-        } catch {}
+        } catch (e) {
+          // 非 JSON 消息，跳过 emoji 处理
+        }
         this.dispatcher.dispatch(ws, text);
       });
 

@@ -8,12 +8,12 @@
 
 ### 代码质量
 
-- [ ] TypeScript strict 模式 — 逐步修掉现有类型错误并开启
+- [x] TypeScript strict 模式 — 逐步修掉现有类型错误并开启（已开启，修复了 sql.js 类型、draughts/gomoku 类型错误）
 - [ ] Dispatcher.ts 拆分 — 74KB 单文件，按游戏类型/功能拆分
-- [ ] 消除 `(room as any)` — Room 类挂了十几个动态字段（_katagoGame、_aiDifficulty、_guessFirst、_challengeTimer 等），应改为正式属性
-- [ ] 消除空 `catch {}` 块 — connection.ts、RoomPersistence.ts、KataGoManager.ts、WSServer.ts 多处静默吞掉错误，出问题无法定位
-- [ ] DB 查询类型安全 — queryAll/queryOne 返回 `any`，应定义类型
-- [ ] admin.ts SQL 字段名拼接 — `UPDATE users SET ${updates.join(', ')}` 未做白名单校验，有注入风险
+- [x] 消除 `(room as any)` — Room 类挂了十几个动态字段（_katagoGame、_aiDifficulty、_guessFirst、_challengeTimer 等），应改为正式属性
+- [x] 消除空 `catch {}` 块 — connection.ts、RoomPersistence.ts、KataGoManager.ts、WSServer.ts 多处静默吞掉错误，出问题无法定位
+- [x] DB 查询类型安全 — queryAll/queryOne 返回 `any`，应定义类型
+- [x] admin.ts SQL 字段名拼接 — `UPDATE users SET ${updates.join(', ')}` 未做白名单校验，有注入风险（实际已使用 `as const` 白名单）
 
 ### 性能与资源
 

@@ -65,12 +65,12 @@ export function saveDb(): void {
 /**
  * 查询多条记录。
  */
-export function queryAll(sql: string, params?: any[]): any[] {
+export function queryAll<T = any>(sql: string, params?: any[]): T[] {
   const stmt = db!.prepare(sql);
   if (params) stmt.bind(params);
-  const rows: any[] = [];
+  const rows: T[] = [];
   while (stmt.step()) {
-    rows.push(stmt.getAsObject());
+    rows.push(stmt.getAsObject() as T);
   }
   stmt.free();
   return rows;
@@ -79,8 +79,8 @@ export function queryAll(sql: string, params?: any[]): any[] {
 /**
  * 查询单条记录。
  */
-export function queryOne(sql: string, params?: any[]): any | undefined {
-  const rows = queryAll(sql, params);
+export function queryOne<T = any>(sql: string, params?: any[]): T | undefined {
+  const rows = queryAll<T>(sql, params);
   return rows.length > 0 ? rows[0] : undefined;
 }
 

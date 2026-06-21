@@ -22,7 +22,7 @@ router.get('/list', (_req: Request, res: Response) => {
  */
 router.get('/:id', (req: Request, res: Response) => {
   try {
-    const info = loadSgf(req.params.id);
+    const info = loadSgf(req.params.id as string);
     res.json({ sgf: info });
   } catch (e: any) {
     res.status(404).json({ error: '棋谱未找到' });

@@ -32,7 +32,9 @@ export function logRoomDestroyed(roomId: string): void {
       `UPDATE room_logs SET destroyed_at = datetime('now', 'localtime') WHERE room_id = ? AND destroyed_at IS NULL`,
       [roomId]
     );
-  } catch {}
+  } catch (e) {
+    console.error('[DB] 记录房间销毁时间失败:', e);
+  }
 }
 
 export function clearActiveRooms(): void {

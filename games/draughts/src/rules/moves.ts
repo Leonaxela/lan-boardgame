@@ -110,7 +110,7 @@ export function hasCaptures(board: Board, color: DraughtsColor): boolean {
     for (let c = 0; c < board[0].length; c++) {
       const piece = board[r][c];
       if (piece && draughtsPieceColor(piece) === color) {
-        const captures = getCaptureMoves(board, { row: r, col: c });
+        const captures = getCaptureMoves(board, { row: r, col: c }, color);
         if (captures.length > 0) return true;
       }
     }
@@ -128,7 +128,7 @@ export function getMultiCaptures(
   color: DraughtsColor,
   visited: Set<string> = new Set(),
 ): RawMove[] {
-  const captures = getCaptureMoves(board, pos);
+  const captures = getCaptureMoves(board, pos, color);
   const results: RawMove[] = [];
 
   if (captures.length === 0) {

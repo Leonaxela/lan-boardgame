@@ -25,4 +25,5 @@ export interface GomokuExtraState {
   consecutivePasses: number;
   /** 棋盘上各颜色棋子数 */
   stoneCount: Record<string, number>;
+  [key: string]: unknown;
 }

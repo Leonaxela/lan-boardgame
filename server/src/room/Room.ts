@@ -34,6 +34,14 @@ export interface ChallengeState {
   createdAt: number;
 }
 
+// ── 猜先状态 ──
+export interface GuessFirstState {
+  challengerId: string;
+  number: number | string | null;
+  choice: string | null;
+  phase: 'waiting_number' | 'waiting_choice' | 'done';
+}
+
 // ── 房间数据 ──
 export class Room {
   readonly roomId: string;
@@ -53,6 +61,22 @@ export class Room {
   createdAt: number;
   /** 游戏开始时间戳（仅围棋使用） */
   gameStartedAt: number | null = null;
+
+  // ── 游戏状态属性（原 (room as any) 动态字段）──
+  /** 是否是 KataGo 对弈 */
+  katagoGame: boolean = false;
+  /** KataGo 棋盘大小 */
+  katagoBoardSize: number = 19;
+  /** AI 难度等级 */
+  aiDifficulty: number = 2;
+  /** AI 连续 pass 次数 */
+  aiConsecutivePasses: number = 0;
+  /** 申请再战的玩家 ID 列表 */
+  rematchPlayers: string[] = [];
+  /** 挑战超时定时器 */
+  challengeTimer: NodeJS.Timeout | null = null;
+  /** 猜先状态 */
+  guessFirst: GuessFirstState | null = null;
 
   constructor(roomId: string, gameType: GameType, config: GameConfig) {
     this.roomId = roomId;
