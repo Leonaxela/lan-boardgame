@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS game_records (
   pgn           TEXT,                      -- 中国象棋/国际象棋 PGN 格式棋谱
   pdn           TEXT,                      -- 国际跳棋 PDN 格式棋谱
   scores        TEXT,                      -- JSON: {playerId: score}
+  difficulty    TEXT,                      -- AI 难度: 'easy'/'normal'/'hard'/'master' 或 KataGo: '30v'/'100v'/'500v'/'2000v'
   created_at    TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
   duration_sec  INTEGER                    -- 对局时长（秒）
 );

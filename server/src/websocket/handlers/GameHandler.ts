@@ -7,6 +7,7 @@ import { kataGoManager } from '../../katago/KataGoManager.js';
 import { getEngine, updateClock, enrichGameResult, sendError } from '../utils.js';
 import type { ClientMessage, DispatcherContext } from '../types.js';
 import { scheduleKataGoMove, sendKatagoAnalysisReport } from './KataGoHandler.js';
+import { saveGameRecord } from '../records/GameRecordSaver.js';
 
 export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<string, Function>, scheduleAIMove: (room: Room) => void): void {
 
@@ -54,6 +55,7 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
     if (result) {
       enrichGameResult(room, result);
       room.gameState.phase = GamePhase.Finished;
+      saveGameRecord(room, result);
       room.broadcast({
         type: 'game_over',
         payload: { result, gameState: room.gameState },
@@ -142,6 +144,7 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
         kataGoManager.destroySession(room.roomId);
         sendKatagoAnalysisReport(room);
       }
+      saveGameRecord(room, result);
       room.broadcast({
         type: 'game_over',
         payload: { result, gameState: room.gameState },
@@ -169,6 +172,7 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
       sendKatagoAnalysisReport(room);
       kataGoManager.destroySession(room.roomId);
     }
+    saveGameRecord(room, result);
     room.broadcast({
       type: 'game_over',
       payload: { result, gameState: room.gameState },
@@ -229,6 +233,7 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
       if (result) {
         enrichGameResult(room, result);
         if (room.gameState) room.gameState.phase = GamePhase.Finished;
+        saveGameRecord(room, result);
         room.broadcast({
           type: 'game_over',
           payload: { result, gameState: room.gameState, message: '双方同意终局数子' },
@@ -241,6 +246,7 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
         };
         enrichGameResult(room, manualResult);
         if (room.gameState) room.gameState.phase = GamePhase.Finished;
+        saveGameRecord(room, manualResult);
         room.broadcast({
           type: 'game_over',
           payload: { result: manualResult, gameState: room.gameState, message: '双方同意终局数子' },

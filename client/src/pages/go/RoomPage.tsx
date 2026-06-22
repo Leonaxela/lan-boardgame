@@ -355,7 +355,7 @@ export default function GoRoomPage() {
                 {/* KataGo 分析报告 */}
                 {replayMode && katagoAnalysisReport?.analysisData && (
                   <div style={{ marginBottom: 6, borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 6 }}>
-                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', marginBottom: 2 }}>胜率走势</div>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, textAlign: 'center', marginBottom: 2 }}>胜率走势 · 点击跳步</div>
                     <LineChart
                       data={(() => {
                         const steps = Object.keys(katagoAnalysisReport.analysisData).sort((a, b) => Number(a) - Number(b));
@@ -367,6 +367,7 @@ export default function GoRoomPage() {
                       width={200}
                       height={120}
                       highlightIndex={replayStep}
+                      onStepClick={(idx) => setReplayStep(idx)}
                     />
                   </div>
                 )}
@@ -395,9 +396,9 @@ export default function GoRoomPage() {
                     <span style={{ cursor: 'pointer', fontSize: 16, opacity: 0.7 }} onClick={() => setShowDiffInfo(!showDiffInfo)}>🛈</span>
                     {showDiffInfo && (
                       <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 8, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '10px 14px', width: 200, fontSize: 12, lineHeight: 1.6, color: '#ccc', zIndex: 100, whiteSpace: 'nowrap' }}>
-                        <div><b>简单</b> — ~10-15级，入门级</div>
-                        <div><b>普通</b> — ~业余1-2段，中级棋手</div>
-                        <div><b>困难</b> — ~业余3-5段，强业余棋手</div>
+                        <div><b>简单</b> — 入门级</div>
+                        <div><b>普通</b> — 中级</div>
+                        <div><b>困难</b> — MCTS AI</div>
                       </div>
                     )}
                   </span>
@@ -845,9 +846,10 @@ export default function GoRoomPage() {
                 <label style={labelStyle}>难度</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[
-                    { value: 1, label: '简单', desc: '500 visits' },
-                    { value: 2, label: '普通', desc: '1000 visits' },
-                    { value: 3, label: '困难', desc: '2000 visits' },
+                    { value: 1, label: '简单', desc: '30 visits' },
+                    { value: 2, label: '普通', desc: '100 visits' },
+                    { value: 3, label: '困难', desc: '500 visits' },
+                    { value: 4, label: '顶级', desc: '2000 visits' },
                   ].map(d => (
                     <button key={d.value} style={optionBtnStyle(katagoDifficulty === d.value)} onClick={() => setKatagoDifficulty(d.value)}>
                       {d.label}
@@ -855,7 +857,7 @@ export default function GoRoomPage() {
                   ))}
                 </div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-                  {katagoDifficulty === 1 ? '约10-5级业余水平' : katagoDifficulty === 2 ? '约5级-业余3段' : '约业余3-5段'}
+                  {katagoDifficulty === 1 ? '约10-5级业余水平' : katagoDifficulty === 2 ? '约5级-业余3段' : katagoDifficulty === 3 ? '约业余3-5段' : '职业九段级别'}
                 </div>
               </div>
 
@@ -886,11 +888,13 @@ export default function GoRoomPage() {
                   取消
                 </button>
                 <button style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #2e7d32, #1b5e20)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }} onClick={() => {
-                  const visitsMap: Record<number, number> = { 1: 500, 2: 1000, 3: 2000 };
+                  const visitsMap: Record<number, number> = { 1: 30, 2: 100, 3: 500, 4: 2000 };
+                  const timeMap: Record<number, number> = { 1: 5, 2: 15, 3: 30, 4: 60 };
                   startKatagoGame({
                     boardSize: katagoBoardSize,
                     rules: katagoRules,
                     maxVisits: visitsMap[katagoDifficulty],
+                    maxTime: timeMap[katagoDifficulty],
                     playerColor: katagoPlayerColor,
                   });
                   setShowKatagoConfig(false);

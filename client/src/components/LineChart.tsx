@@ -3,7 +3,7 @@ interface Point {
   value: number;
 }
 
-export default function LineChart({ data, width = 500, height = 220, highlightIndex }: { data: Point[]; width?: number; height?: number; highlightIndex?: number }) {
+export default function LineChart({ data, width = 500, height = 220, highlightIndex, onStepClick }: { data: Point[]; width?: number; height?: number; highlightIndex?: number; onStepClick?: (index: number) => void }) {
   if (data.length === 0) return <p style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>暂无数据</p>;
 
   const pad = { top: 24, right: 8, bottom: width < 250 ? 20 : 32, left: width < 250 ? 30 : 50 };
@@ -38,8 +38,22 @@ export default function LineChart({ data, width = 500, height = 220, highlightIn
     return { y, val: Math.round(val) };
   });
 
+  // 数据点 >50 时只画折线和当前步高亮
+  const dense = data.length > 50;
+
+  // 点击跳步：找最近的数据点
+  const handleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!onStepClick || data.length < 2) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * width;
+    // 计算点击位置对应的步数
+    const idx = Math.round(((mouseX - pad.left) / chartW) * (data.length - 1));
+    const clamped = Math.max(0, Math.min(data.length - 1, idx));
+    onStepClick(clamped);
+  };
+
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto' }}>
+    <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto', cursor: onStepClick ? 'pointer' : 'default' }} onClick={handleClick}>
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#dcb35c" stopOpacity="0.25" />
@@ -59,32 +73,49 @@ export default function LineChart({ data, width = 500, height = 220, highlightIn
       <path d={areaPath} fill="url(#areaGrad)" />
       <path d={linePath} fill="none" stroke="#dcb35c" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
 
-      {points.map((p, i) => {
-        // 数据点太多时稀疏显示标签，保证间隔约 40px
-        const labelStep = Math.max(1, Math.floor(data.length / (chartW / 40)));
-        const showLabel = i % labelStep === 0 || i === data.length - 1 || i === highlightIndex;
-        return (
-        <g key={i}>
-          {i === highlightIndex ? (
-            <>
-              <circle cx={p.x} cy={p.y} r="8" fill="#1a1a2e" stroke="#ff6b6b" strokeWidth="3" />
-              <circle cx={p.x} cy={p.y} r="3" fill="#ff6b6b" />
-            </>
-          ) : (
-            <circle cx={p.x} cy={p.y} r="4" fill="#1a1a2e" stroke="#dcb35c" strokeWidth="2.5" />
-          )}
-          {showLabel && (
-            <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#dcb35c" fontSize="11" fontWeight="600">
-              {p.value}
+      {dense ? (
+        // 数据点 >50：只画当前步高亮圆点
+        highlightIndex !== undefined && points[highlightIndex] && (
+          <g>
+            <circle cx={points[highlightIndex].x} cy={points[highlightIndex].y} r="8" fill="#1a1a2e" stroke="#ff6b6b" strokeWidth="3" />
+            <circle cx={points[highlightIndex].x} cy={points[highlightIndex].y} r="3" fill="#ff6b6b" />
+            <text x={points[highlightIndex].x} y={points[highlightIndex].y - 12} textAnchor="middle" fill="#ff6b6b" fontSize="11" fontWeight="700">
+              {points[highlightIndex].value}%
             </text>
-          )}
-          {showLabel && (
-            <text x={p.x} y={pad.top + chartH + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11">
-              {p.label}
+            <text x={points[highlightIndex].x} y={pad.top + chartH + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11">
+              {points[highlightIndex].label}
             </text>
-          )}
-        </g>
-      );})}
+          </g>
+        )
+      ) : (
+        // 数据点 <=50：正常显示所有圆点
+        points.map((p, i) => {
+          const labelStep = Math.max(1, Math.floor(data.length / (chartW / 40)));
+          const showLabel = i % labelStep === 0 || i === data.length - 1 || i === highlightIndex;
+          return (
+            <g key={i}>
+              {i === highlightIndex ? (
+                <>
+                  <circle cx={p.x} cy={p.y} r="8" fill="#1a1a2e" stroke="#ff6b6b" strokeWidth="3" />
+                  <circle cx={p.x} cy={p.y} r="3" fill="#ff6b6b" />
+                </>
+              ) : (
+                <circle cx={p.x} cy={p.y} r="4" fill="#1a1a2e" stroke="#dcb35c" strokeWidth="2.5" />
+              )}
+              {showLabel && (
+                <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#dcb35c" fontSize="11" fontWeight="600">
+                  {p.value}
+                </text>
+              )}
+              {showLabel && (
+                <text x={p.x} y={pad.top + chartH + 18} textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11">
+                  {p.label}
+                </text>
+              )}
+            </g>
+          );
+        })
+      )}
     </svg>
   );
 }

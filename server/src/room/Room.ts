@@ -69,6 +69,8 @@ export class Room {
   katagoBoardSize: number = 19;
   /** AI 难度等级 */
   aiDifficulty: number = 2;
+  /** KataGo 难度（用于保存到对局记录） */
+  katagoDifficulty: number = 0;
   /** AI 连续 pass 次数 */
   aiConsecutivePasses: number = 0;
   /** 申请再战的玩家 ID 列表 */

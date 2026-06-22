@@ -32,8 +32,8 @@ export function selectAIMove(state: GameState, color: string, difficulty: number
   let bestScore = -1;
   let bestMove: Position | null = null;
 
-  // 简单模式只看附近1格，普通看2格，困难看3格
-  const neighborDist = difficulty >= 3 ? 3 : difficulty >= 2 ? 2 : 1;
+  // 简单模式只看附近1格，普通看2格，中等看3格，困难看4格
+  const neighborDist = difficulty >= 4 ? 4 : difficulty >= 3 ? 3 : difficulty >= 2 ? 2 : 1;
 
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
@@ -57,11 +57,15 @@ export function selectAIMove(state: GameState, color: string, difficulty: number
         // 简单：仅进攻，不考虑防守和位置
         total = attackScore;
       } else if (difficulty === 2) {
-        // 普通：当前 AI
+        // 普通：进攻+防守+中心
         total = attackScore + defenseScore * 1.1 + centerScore;
-      } else {
-        // 困难：更强防守 + 位置加成
+      } else if (difficulty === 3) {
+        // 中等：更强防守+位置加成
         total = attackScore + defenseScore * 1.3 + centerScore * 1.5;
+      } else {
+        // 困难：最强防守+全盘位置+压制
+        const farBonus = (r >= 5 && r <= 9 && c >= 5 && c <= 9) ? 3 : 0;
+        total = attackScore * 1.2 + defenseScore * 1.5 + centerScore * 2.0 + farBonus;
       }
 
       if (total > bestScore) {

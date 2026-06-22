@@ -33,9 +33,11 @@ export function saveGameRecord(room: Room, result: any): void {
               : null;
     const pdn = isDraughts ? generateDraughtsPdn(room, result) : null;
 
+    const difficulty = room.katagoDifficulty || room.aiDifficulty || 0;
+
     execute(
-      `INSERT INTO game_records (id, game_type, rule_set, board_size, players, winner_id, reason, moves, sgf, pgn, pdn, scores, created_at, duration_sec)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
+      `INSERT INTO game_records (id, game_type, rule_set, board_size, players, winner_id, reason, moves, sgf, pgn, pdn, scores, difficulty, created_at, duration_sec)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime'), ?)`,
       [
         uuid(),
         room.gameType,
@@ -49,6 +51,7 @@ export function saveGameRecord(room: Room, result: any): void {
         pgn,
         pdn,
         JSON.stringify(result?.scores || {}),
+        difficulty,
         Math.floor((Date.now() - room.createdAt) / 1000),
       ]
     );

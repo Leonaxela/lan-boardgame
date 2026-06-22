@@ -17,7 +17,8 @@ export interface KataGoConfig {
   boardSize: number;       // 9, 13, 19
   rules: 'chinese' | 'japanese';
   komi: number;            // 7.5 (chinese) / 6.5 (japanese)
-  maxVisits: number;       // 500, 1000, 2000
+  maxVisits: number;       // 30, 100, 500, 2000
+  maxTime: number;         // 5, 15, 30, 60 秒
 }
 
 /** 单步分析数据 */
@@ -88,7 +89,7 @@ export class KataGoManager {
       'gtp',
       '-model', modelPath,
       '-config', configPath,
-      '-override-config', `maxVisits=${config.maxVisits},maxTime=60`,
+      '-override-config', `maxVisits=${config.maxVisits},maxTime=${config.maxTime}`,
     ];
 
     const proc = spawn(katagoPath, args, {
@@ -264,7 +265,7 @@ export class KataGoManager {
 
     try {
       // 超时 = maxTime*2 + 30s 余量，确保不会在 KataGo 还在思考时就超时
-      const maxTimeMs = 60000; // 与启动参数 maxTime=60 一致
+      const maxTimeMs = (session.config.maxTime || 60) * 1000;
       const timeoutMs = Math.max(150000, maxTimeMs * 2 + 30000);
       const start = Date.now();
       const response = await this.sendCommand(roomId, `genmove ${color}`, timeoutMs);

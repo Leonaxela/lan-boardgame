@@ -224,7 +224,7 @@ router.get('/records', authenticate, requireAdmin, (req: Request, res: Response)
   const offset = (page - 1) * limit;
   const total = (queryOne('SELECT COUNT(*) as c FROM game_records') as any).c;
   const records = queryAll(
-    'SELECT id, game_type, board_size, players, winner_id, reason, scores, created_at, duration_sec FROM game_records ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    'SELECT id, game_type, board_size, players, winner_id, reason, scores, difficulty, created_at, duration_sec FROM game_records ORDER BY created_at DESC LIMIT ? OFFSET ?',
     [limit, offset]
   );
   res.json({ records, total, page, limit, totalPages: Math.ceil(total / limit) });

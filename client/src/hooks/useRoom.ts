@@ -83,7 +83,7 @@ export function useRoom() {
   const sendRpsChoice = useCallback((choice: string) => { wsClient.send('guess_first_number', { rps: choice }); }, []);
 
   // KataGo 对弈
-  const startKatagoGame = useCallback((config: { boardSize: number; rules: string; maxVisits: number; playerColor: string }) => {
+  const startKatagoGame = useCallback((config: { boardSize: number; rules: string; maxVisits: number; maxTime: number; playerColor: string }) => {
     wsClient.send('start_katago_game', config);
   }, []);
 

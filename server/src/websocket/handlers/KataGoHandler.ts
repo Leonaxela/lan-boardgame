@@ -140,12 +140,13 @@ export function registerKataGoHandlers(ctx: DispatcherContext, handlers: Map<str
     const boardSize = (msg.payload.boardSize as number) || 19;
     const rules = (msg.payload.rules as 'chinese' | 'japanese') || 'chinese';
     const maxVisits = (msg.payload.maxVisits as number) || 1000;
+    const maxTime = (msg.payload.maxTime as number) || 60;
     const playerColor = (msg.payload.playerColor as 'black' | 'white') || 'black';
     const komi = rules === 'japanese' ? 6.5 : 7.5;
 
     console.log(`[KataGo] 开始对弈 boardSize=${boardSize} rules=${rules} visits=${maxVisits} player=${playerColor}`);
 
-    kataGoManager.startSession(room.roomId, { boardSize, rules, komi, maxVisits })
+    kataGoManager.startSession(room.roomId, { boardSize, rules, komi, maxVisits, maxTime })
       .then(() => kataGoManager.initializeBoard(room.roomId))
       .then(() => {
         const config = { ...room.config };
@@ -189,6 +190,8 @@ export function registerKataGoHandlers(ctx: DispatcherContext, handlers: Map<str
 
         room.katagoGame = true;
         room.katagoBoardSize = boardSize;
+        const visitsMap: Record<number, number> = { 30: 11, 100: 12, 500: 13, 2000: 14 };
+        room.katagoDifficulty = visitsMap[maxVisits] || 0;
 
         room.broadcast({
           type: 'game_started',

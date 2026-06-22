@@ -36,6 +36,8 @@ export async function initDb(): Promise<SqlJsDatabase> {
   try { db.run('ALTER TABLE game_records ADD COLUMN pgn TEXT'); } catch {}
   // 迁移：添加 pdn 列（如果不存在）
   try { db.run('ALTER TABLE game_records ADD COLUMN pdn TEXT'); } catch {}
+  // 迁移：添加 difficulty 列（如果不存在）
+  try { db.run('ALTER TABLE game_records ADD COLUMN difficulty TEXT'); } catch {}
 
   // 清空过期的在线会话和活跃房间（重启后全部无效）
   db.run('DELETE FROM user_sessions');

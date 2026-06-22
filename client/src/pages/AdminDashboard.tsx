@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getDifficultyLabel } from '@lan-boardgame/shared';
 import { modalConfirm } from '../components/Modal';
 import { useFavicon } from '../hooks/useFavicon';
 import GoBoard from '../games/go/GoBoard';
@@ -42,14 +43,22 @@ function formatResult(record: any): JSX.Element {
   }
 }
 
-function formatPlayers(record: any): string {
+function formatPlayers(record: any): React.ReactNode {
   try {
     const players = JSON.parse(record.players || '[]');
     const isCC = record.game_type === 'chinese-chess';
-    return players.map((p: any) => {
+    const diff = getDifficultyLabel(record.difficulty || 0);
+    return players.map((p: any, i: number) => {
       const icon = isCC ? (p.color === 'red' ? '🔴' : '⚫') : (p.color === 'black' ? '⚫' : p.color === 'white' ? '⚪' : '');
-      return `${icon} ${p.name}`;
-    }).join(' vs ');
+      const isAI = p.name?.startsWith('🤖');
+      return (
+        <span key={i}>
+          {i > 0 && ' vs '}
+          {icon} {p.name}
+          {isAI && diff && <><span style={{ fontSize: 12 }}>：</span><span style={{ color: '#dcb35c', fontSize: 12 }}>{diff}</span></>}
+        </span>
+      );
+    });
   } catch { return '-'; }
 }
 

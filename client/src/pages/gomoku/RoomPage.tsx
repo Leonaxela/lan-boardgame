@@ -201,7 +201,7 @@ export default function GomokuRoomPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 3 }}>
                 <button className="btn-sidebar" style={{ whiteSpace: 'nowrap' }} onClick={() => wsClient.send('start_ai_game', { difficulty: aiDifficulty })}>🤖 AI 对弈</button>
                 <Dropdown
-                  options={[{value:'1',label:'简单'},{value:'2',label:'普通'},{value:'3',label:'困难'}]}
+                  options={[{value:'1',label:'简单'},{value:'2',label:'普通'},{value:'3',label:'中等'},{value:'4',label:'困难'}]}
                   value={String(aiDifficulty)}
                   onChange={v => setAiDifficulty(Number(v))}
                   direction="up"
