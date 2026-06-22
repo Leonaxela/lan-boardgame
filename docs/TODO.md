@@ -9,7 +9,7 @@
 ### 代码质量
 
 - [x] TypeScript strict 模式 — 逐步修掉现有类型错误并开启（已开启，修复了 sql.js 类型、draughts/gomoku 类型错误）
-- [ ] Dispatcher.ts 拆分 — 74KB 单文件，按游戏类型/功能拆分
+- [x] Dispatcher.ts 拆分 — 74KB 单文件，按游戏类型/功能拆分（已完成：types.ts, utils.ts, RoomHandler, GameHandler, AIHandler, KataGoHandler, ChallengeHandler, GameRecordSaver + 4 棋谱生成器）
 - [x] 消除 `(room as any)` — Room 类挂了十几个动态字段（_katagoGame、_aiDifficulty、_guessFirst、_challengeTimer 等），应改为正式属性
 - [x] 消除空 `catch {}` 块 — connection.ts、RoomPersistence.ts、KataGoManager.ts、WSServer.ts 多处静默吞掉错误，出问题无法定位
 - [x] DB 查询类型安全 — queryAll/queryOne 返回 `any`，应定义类型
