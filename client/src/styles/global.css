@@ -24,16 +24,17 @@ body {
 }
 .auth-card {
   position: relative;
-  background: linear-gradient(145deg, rgba(26,26,62,0.95), rgba(15,15,35,0.98));
-  border: 1px solid rgba(220, 179, 92, 0.2);
+  background: linear-gradient(145deg, rgba(26,26,62,0.55), rgba(15,15,35,0.6));
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 20px;
   padding: 48px 40px 36px;
   width: 380px;
   text-align: center;
   box-shadow:
-    0 0 60px rgba(220, 179, 92, 0.06),
-    0 20px 60px rgba(0,0,0,0.5);
-  backdrop-filter: blur(20px);
+    0 8px 32px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
 }
 .auth-logo { margin-bottom: 20px; }
 .auth-card h1 {

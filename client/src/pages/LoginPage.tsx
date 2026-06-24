@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { modalAlert } from '../components/Modal';
 import { useFavicon } from '../hooks/useFavicon';
+import FluidBackground from '../components/FluidBackground';
 
 const API = '/api/auth';
 
@@ -32,9 +33,8 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      {/* 装饰性棋盘网格背景 */}
-      <div className="auth-bg-grid" />
-      <div className="auth-card">
+      <FluidBackground />
+      <div className="auth-card" style={{ userSelect: 'none' }}>
         <div className="auth-logo">
           <svg viewBox="0 0 80 80" width="80" height="80">
             <rect width="80" height="80" rx="16" fill="#dcb35c"/>
