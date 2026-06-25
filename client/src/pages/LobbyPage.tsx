@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
-import { wsClient } from '../net/WebSocketClient';
 import { modalAlert } from '../components/Modal';
 import { useFavicon } from '../hooks/useFavicon';
+import type { RoomInfo, GameInfo } from '@lan-boardgame/shared';
 
 export default function LobbyPage() {
   useFavicon('/favicon.svg');
@@ -11,14 +11,14 @@ export default function LobbyPage() {
   const token = localStorage.getItem('token');
   const { connected, send, onMessage } = useWebSocket();
   const [showDialog, setShowDialog] = useState(false);
-  const [roomList, setRoomList] = useState<any[]>([]);
-  const [selectedGame, setSelectedGame] = useState<any>(null);
+  const [roomList, setRoomList] = useState<RoomInfo[]>([]);
+  const [selectedGame, setSelectedGame] = useState<GameInfo | null>(null);
   const [gameStats, setGameStats] = useState<Record<string, {rooms:number,players:number}>>({});
   const [emojiStats, setEmojiStats] = useState({ rooms: 0, players: 0 });
   const totalRooms = Object.values(gameStats).reduce((sum, g) => sum + g.rooms, 0);
   const totalPlayers = Object.values(gameStats).reduce((sum, g) => sum + g.players, 0);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
-  const [games, setGames] = useState<any[]>([]);
+  const [games, setGames] = useState<GameInfo[]>([]);
 
   // 未登录重定向
   useEffect(() => { if (!token) nav('/login'); }, [token, nav]);
@@ -39,18 +39,18 @@ export default function LobbyPage() {
       nav(`/room/${p.roomId}`);
     });
     const u4 = onMessage('emoji_room_list', (p) => {
-      const rooms = p.rooms || [];
-      setEmojiStats({ rooms: rooms.length, players: rooms.reduce((s: number, r: any) => s + r.playerCount, 0) });
+      const rooms = (p.rooms || []) as RoomInfo[];
+      setEmojiStats({ rooms: rooms.length, players: rooms.reduce((s, r) => s + (r.playerCount || 0), 0) });
     });
       return () => { u1(); u2(); u3(); u4(); };
   }, [onMessage, nav, username]);
 
-  // 连接成功后获取房间列表，之后每10秒刷新
+  // 连接成功后获取房间列表，之后每3秒刷新
   useEffect(() => {
     if (!connected) return;
     send('get_rooms', {});
-    wsClient.send('emoji_get_rooms', {});
-    const timer = setInterval(() => { send('get_rooms', {}); wsClient.send('emoji_get_rooms', {}); }, 3000);
+    send('emoji_get_rooms', {});
+    const timer = setInterval(() => { send('get_rooms', {}); send('emoji_get_rooms', {}); }, 3000);
     return () => clearInterval(timer);
   }, [connected, send]);
 
@@ -62,7 +62,7 @@ export default function LobbyPage() {
     }
     setSelectedGame(game);
     if (game.id === 'emoji') {
-      wsClient.send('emoji_get_rooms', {});
+      send('emoji_get_rooms', {});
     } else {
       send('get_rooms');
     }
@@ -73,11 +73,11 @@ export default function LobbyPage() {
     const id = selectedGame?.id || 'go';
     if (id === 'emoji') {
       localStorage.setItem('emoji_username', username || '玩家');
-      wsClient.send('emoji_create_room', { username: username || '玩家' });
+      send('emoji_create_room', { username: username || '玩家' });
       nav('/emoji');
       return;
     }
-    let cfg: any;
+    let cfg: { rows: number; cols: number; extra: Record<string, number | string | boolean> };
     if (id === 'gomoku') {
       cfg = { rows: 15, cols: 15, extra: {} };
     } else if (id === 'chinese-chess') {
@@ -95,7 +95,7 @@ export default function LobbyPage() {
   const joinRoom = (roomId: string) => {
     if (selectedGame?.id === 'emoji') {
       localStorage.setItem('emoji_username', username || '玩家');
-      wsClient.send('emoji_join_room', { roomId, username: username || '玩家' });
+      send('emoji_join_room', { roomId, username: username || '玩家' });
       nav('/emoji');
       return;
     }
