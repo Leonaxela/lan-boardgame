@@ -65,6 +65,14 @@ body {
   background: rgba(255,255,255,0.1);
   box-shadow: 0 0 20px rgba(220, 179, 92, 0.08);
 }
+.auth-toggle-pwd {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,0.35); padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.2s;
+}
+.auth-toggle-pwd:hover { color: rgba(220,179,92,0.7); }
 .auth-btn {
   margin-top: 4px;
   padding: 14px !important;
