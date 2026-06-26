@@ -36,4 +36,33 @@ export class ChatHandler {
 
     return msg;
   }
+
+  /**
+   * 发送系统消息（玩家加入/离开/挑战等关键事件）。
+   * 系统消息 playerId='system', username='系统'，前端按系统样式渲染。
+   * @param highlights text 中需要高亮的关键词（通常是人名）
+   */
+  sendSystemMessage(room: Room, text: string, highlights: string[] = []): ChatMessage {
+    const msg: ChatMessage = {
+      playerId: 'system',
+      username: '系统',
+      text,
+      timestamp: Date.now(),
+      isSystem: true,
+      highlights,
+    };
+
+    room.chatMessages.push(msg);
+
+    if (room.chatMessages.length > MAX_CHAT_HISTORY) {
+      room.chatMessages = room.chatMessages.slice(-MAX_CHAT_HISTORY);
+    }
+
+    room.broadcast({
+      type: 'chat',
+      payload: msg,
+    });
+
+    return msg;
+  }
 }

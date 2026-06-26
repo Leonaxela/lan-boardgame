@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../../hooks/useRoom';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { wsClient } from '../../net/WebSocketClient';
-import GoBoard from '../../games/go/GoBoard';
+import { formatChatTime, isSystemMsg, shouldShowTimeDivider, renderHighlightedText } from '../../utils/chat';
+import GoBoard, { BOARD_THEMES, type BoardTheme } from '../../games/go/GoBoard';
 import Confetti from '../../components/Confetti';
 import { playVictorySound } from '../../utils/sound';
 import { getGameResultText } from '../../utils/gameResult';
@@ -88,6 +89,13 @@ export default function GoRoomPage() {
   const [sgfFiles, setSgfFiles] = useState<any[]>([]);
   const [sgfMoves, setSgfMoves] = useState<any[]>([]);
   const [sgfStep, setSgfStep] = useState(0);
+
+  // 棋盘质感主题（纯本地切换，不持久化、不广播）
+  const [boardThemeIdx, setBoardThemeIdx] = useState(0);
+  const boardTheme: BoardTheme = BOARD_THEMES[boardThemeIdx];
+  const cycleBoardTheme = useCallback(() => {
+    setBoardThemeIdx(prev => (prev + 1) % BOARD_THEMES.length);
+  }, []);
 
   // 通知服务端房间状态变化
   const setActivity = useCallback((activity: string) => {
@@ -548,6 +556,8 @@ export default function GoRoomPage() {
                     onPlace={() => {}}
                     width={boardPx.w}
                     height={boardPx.h}
+                    theme={boardTheme}
+                    onEdgeDoubleClick={cycleBoardTheme}
                   />
                   <div className="sgf-right">
                     <button className="sgf-btn" onClick={() => setSgfStep(Math.min(sgfMoves.length - 1, sgfStep + 1))}>下一步 ▶</button>
@@ -573,6 +583,8 @@ export default function GoRoomPage() {
               height={boardPx.h}
               replayMode={true}
               analysisData={currentAnalysis}
+              theme={boardTheme}
+              onEdgeDoubleClick={cycleBoardTheme}
             />
             <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap' }}>
@@ -605,12 +617,14 @@ export default function GoRoomPage() {
               onPlace={() => {}}
               width={boardPx.w}
               height={boardPx.h}
+              theme={boardTheme}
+              onEdgeDoubleClick={cycleBoardTheme}
             />
             <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
               <p className="text-muted" style={{ margin: 0, color: '#e67e22', fontWeight: 'bold', transform: 'translateY(-6px)' }}>
                 {isMobile
                   ? (isOwner ? '点击 ☰ 查看操作' : '等待对局开始')
-                  : (isOwner ? '点击 AI 对弈 开始下棋，或加载棋谱研究' : room?.activity === 'idle_1' ? '房主打谱中' : room?.activity === 'idle_2' ? '房主AI对弈中' : '房主空闲中')
+                  : (isOwner ? '点击 AI对弈 开始下棋，或 打谱 加载棋谱研究' : room?.activity === 'idle_1' ? '房主打谱中' : room?.activity === 'idle_2' ? '房主AI对弈中' : '房主空闲中')
                 }
               </p>
             </div>
@@ -626,6 +640,8 @@ export default function GoRoomPage() {
               onPlace={handlePlace}
               width={boardPx.w}
               height={boardPx.h}
+              theme={boardTheme}
+              onEdgeDoubleClick={cycleBoardTheme}
             />
             <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
               {gameState.phase === 'playing' ? (
@@ -934,14 +950,33 @@ export default function GoRoomPage() {
         <h3>聊天</h3>
         <div className="chat-messages">
           {chatMessages.length === 0 ? (
-            <p className="text-muted">暂无消息</p>
+            <p className="text-muted chat-empty-hint">暂无消息，发条招呼吧 ✦</p>
           ) : (
-            chatMessages.map((msg, i) => (
-              <div key={i} className="chat-msg">
-                <span className="chat-user">{msg.username}</span>
-                <span className="chat-text">{msg.text}</span>
-              </div>
-            ))
+            chatMessages.map((msg, i) => {
+              const prev = chatMessages[i - 1];
+              const showDivider = shouldShowTimeDivider(msg, prev);
+              const isSystem = isSystemMsg(msg);
+              const isMe = !!myId && msg.playerId === myId;
+              return (
+                <Fragment key={i}>
+                  {showDivider && (
+                    <div className="chat-time-divider">
+                      <span>{formatChatTime(msg.timestamp)}</span>
+                    </div>
+                  )}
+                  {isSystem ? (
+                    <div className="chat-msg system">
+                      <span className="chat-system-text">{renderHighlightedText(msg.text, msg.highlights)}</span>
+                    </div>
+                  ) : (
+                    <div className={`chat-msg ${isMe ? 'me' : 'other'}`}>
+                      {!isMe && <span className="chat-user">{msg.username}</span>}
+                      <div className="chat-bubble">{msg.text}</div>
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })
           )}
           <div ref={chatEndRef} />
         </div>

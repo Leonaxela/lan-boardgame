@@ -38,9 +38,13 @@ interface GoBoardProps {
   } | null;
   /** 回看模式下禁止点击 */
   replayMode?: boolean;
+  /** 棋盘质感主题（双击边缘切换） */
+  theme?: BoardTheme;
+  /** 双击棋盘边缘区域时的回调（用于切换主题） */
+  onEdgeDoubleClick?: () => void;
 }
 
-const COLORS = {
+const DEFAULT_COLORS = {
   BOARD: '#dcb35c',
   LINE: '#5a3e0a',
   STAR: '#5a3e0a',
@@ -52,13 +56,60 @@ const COLORS = {
   BG: '#c89d3c',
 };
 
+/** 棋盘质感主题：棋盘颜色 + 配套棋子颜色 */
+export interface BoardTheme {
+  name: string;
+  BOARD: string;
+  LINE: string;
+  STAR: string;
+  LABEL: string;
+  BG: string;
+  /** 黑子配色：内亮色、外暗色、描边色 */
+  BLACK_INNER: string;
+  BLACK_OUTER: string;
+  BLACK_BORDER: string;
+  /** 白子配色：内亮色、外暗色、描边色 */
+  WHITE_INNER: string;
+  WHITE_OUTER: string;
+  WHITE_BORDER: string;
+}
+
+/** 预设棋盘质感主题（双击边缘循环切换，棋盘+棋子配套） */
+export const BOARD_THEMES: BoardTheme[] = [
+  {
+    name: 'classic', BOARD: '#dcb35c', LINE: '#5a3e0a', STAR: '#5a3e0a', LABEL: '#5a3e0a', BG: '#c89d3c',
+    BLACK_INNER: '#555', BLACK_OUTER: '#1a1a1a', BLACK_BORDER: '#000',
+    WHITE_INNER: '#ffffff', WHITE_OUTER: '#cccccc', WHITE_BORDER: '#aaa',
+  },
+  {
+    name: 'paper', BOARD: '#e8d8b0', LINE: '#333333', STAR: '#333333', LABEL: '#555555', BG: '#d5c49a',
+    BLACK_INNER: '#3a3a3a', BLACK_OUTER: '#0a0a0a', BLACK_BORDER: '#000',
+    WHITE_INNER: '#ffffff', WHITE_OUTER: '#d8d8d8', WHITE_BORDER: '#888',
+  },
+  {
+    name: 'slate', BOARD: '#3a3a3a', LINE: '#9a9a9a', STAR: '#9a9a9a', LABEL: '#b0b0b0', BG: '#2a2a2a',
+    BLACK_INNER: '#2a2a2a', BLACK_OUTER: '#000000', BLACK_BORDER: '#000',
+    WHITE_INNER: '#ffffff', WHITE_OUTER: '#b8b8b8', WHITE_BORDER: '#888',
+  },
+  {
+    name: 'jade', BOARD: '#3a5a3a', LINE: '#1a3a1a', STAR: '#1a3a1a', LABEL: '#d0e8d0', BG: '#2a4a2a',
+    BLACK_INNER: '#2a3a2a', BLACK_OUTER: '#081808', BLACK_BORDER: '#050a05',
+    WHITE_INNER: '#f5fff5', WHITE_OUTER: '#c8e0c8', WHITE_BORDER: '#88a888',
+  },
+];
+
 export default function GoBoard({
   board, boardSize, lastMove, myColor, isMyTurn, onPlace, width = 500, height = 500, moveNumbers = null,
   analysisData = null, replayMode = false,
+  theme = BOARD_THEMES[0],
+  onEdgeDoubleClick,
 }: GoBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverRef = useRef<{ row: number; col: number } | null>(null);
   const animRef = useRef<number>(0);
+
+  // 合并主题颜色（棋子颜色固定，棋盘颜色来自 theme）
+  const COLORS = { ...DEFAULT_COLORS, BOARD: theme.BOARD, LINE: theme.LINE, STAR: theme.STAR, LABEL: theme.LABEL, BG: theme.BG };
 
   // 计算布局参数
   const padding = 30;
@@ -175,17 +226,17 @@ export default function GoBoard({
         // 棋子本体
         const gradient = ctx.createRadialGradient(sx - radius * 0.3, sy - radius * 0.3, radius * 0.1, sx, sy, radius);
         if (value === 'black') {
-          gradient.addColorStop(0, '#555');
-          gradient.addColorStop(1, '#1a1a1a');
+          gradient.addColorStop(0, theme.BLACK_INNER);
+          gradient.addColorStop(1, theme.BLACK_OUTER);
         } else {
-          gradient.addColorStop(0, '#ffffff');
-          gradient.addColorStop(1, '#cccccc');
+          gradient.addColorStop(0, theme.WHITE_INNER);
+          gradient.addColorStop(1, theme.WHITE_OUTER);
         }
         ctx.beginPath();
         ctx.arc(sx, sy, radius, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-        ctx.strokeStyle = value === 'black' ? '#000' : '#aaa';
+        ctx.strokeStyle = value === 'black' ? theme.BLACK_BORDER : theme.WHITE_BORDER;
         ctx.lineWidth = 0.5;
         ctx.stroke();
 
@@ -333,16 +384,29 @@ export default function GoBoard({
       }
     };
 
+    // 双击棋盘边缘区域（非交叉点）切换棋盘质感主题
+    const handleDoubleClick = (e: MouseEvent) => {
+      if (!onEdgeDoubleClick) return;
+      const rect = canvas.getBoundingClientRect();
+      const px = e.clientX - rect.left;
+      const py = e.clientY - rect.top;
+      const pos = pixelToBoard(px, py);
+      // pos 为 null 说明点击在边缘区域（padding 区或交叉点容忍范围外）
+      if (!pos) onEdgeDoubleClick();
+    };
+
     canvas.addEventListener('mousemove', handleMove);
     canvas.addEventListener('mouseleave', handleLeave);
     canvas.addEventListener('click', handleClick);
+    if (onEdgeDoubleClick) canvas.addEventListener('dblclick', handleDoubleClick);
 
     return () => {
       canvas.removeEventListener('mousemove', handleMove);
       canvas.removeEventListener('mouseleave', handleLeave);
       canvas.removeEventListener('click', handleClick);
+      if (onEdgeDoubleClick) canvas.removeEventListener('dblclick', handleDoubleClick);
     };
-  }, [board, isMyTurn, onPlace, pixelToBoard, draw]);
+  }, [board, isMyTurn, onPlace, pixelToBoard, draw, onEdgeDoubleClick]);
 
   return (
     <canvas

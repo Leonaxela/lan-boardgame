@@ -53,6 +53,11 @@
     padding-bottom: 64px;
   }
 
+  /* 聊天栏移动端：气泡放宽，间距收紧 */
+  .go-room-chat .chat-bubble { max-width: 88%; }
+  .go-room-chat .chat-msg { margin-bottom: 8px; }
+  .go-room-chat .chat-time-divider { margin: 10px 0 6px; }
+
   /* SGF 打谱移动端 */
   .sgf-list {
     max-width: 100%;

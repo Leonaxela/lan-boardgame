@@ -26,6 +26,10 @@ export interface ChatMessage {
   username: string;
   text: string;
   timestamp: number;
+  /** 系统消息标记：true 时前端按系统消息样式渲染 */
+  isSystem?: boolean;
+  /** 需要在 text 中高亮显示的人名/关键词列表 */
+  highlights?: string[];
 }
 
 // ── 挑战状态 ──

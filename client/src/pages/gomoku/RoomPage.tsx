@@ -1,8 +1,9 @@
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback, Fragment } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRoom } from '../../hooks/useRoom';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { wsClient } from '../../net/WebSocketClient';
+import { formatChatTime, isSystemMsg, shouldShowTimeDivider, renderHighlightedText } from '../../utils/chat';
 import GomokuBoard from '../../games/gomoku/GomokuBoard';
 import Confetti from '../../components/Confetti';
 import { playVictorySound } from '../../utils/sound';
@@ -253,7 +254,7 @@ export default function GomokuRoomPage() {
               height={boardPx.h}
             />
             <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
-              <p className="text-muted" style={{ marginTop: -2, color: '#e67e22', fontWeight: 'bold', margin: 0 }}>
+              <p className="text-muted" style={{ margin: 0, color: '#e67e22', fontWeight: 'bold', transform: 'translateY(-6px)'}}>
                 {isMobile
                   ? (isOwner ? '点击 ☰ 查看操作' : '等待对局开始')
                   : (isOwner ? '点击 AI 对弈 开始下棋' : room?.activity === 'idle_2' ? '房主AI对弈中' : '等待对局开始...')
@@ -448,14 +449,33 @@ export default function GomokuRoomPage() {
         <h3>聊天</h3>
         <div className="chat-messages">
           {chatMessages.length === 0 ? (
-            <p className="text-muted">暂无消息</p>
+            <p className="text-muted chat-empty-hint">暂无消息，发条招呼吧 ✦</p>
           ) : (
-            chatMessages.map((msg, i) => (
-              <div key={i} className="chat-msg">
-                <span className="chat-user">{msg.username}</span>
-                <span className="chat-text">{msg.text}</span>
-              </div>
-            ))
+            chatMessages.map((msg, i) => {
+              const prev = chatMessages[i - 1];
+              const showDivider = shouldShowTimeDivider(msg, prev);
+              const isSystem = isSystemMsg(msg);
+              const isMe = !!myId && msg.playerId === myId;
+              return (
+                <Fragment key={i}>
+                  {showDivider && (
+                    <div className="chat-time-divider">
+                      <span>{formatChatTime(msg.timestamp)}</span>
+                    </div>
+                  )}
+                  {isSystem ? (
+                    <div className="chat-msg system">
+                      <span className="chat-system-text">{renderHighlightedText(msg.text, msg.highlights)}</span>
+                    </div>
+                  ) : (
+                    <div className={`chat-msg ${isMe ? 'me' : 'other'}`}>
+                      {!isMe && <span className="chat-user">{msg.username}</span>}
+                      <div className="chat-bubble">{msg.text}</div>
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })
           )}
           <div ref={chatEndRef} />
         </div>

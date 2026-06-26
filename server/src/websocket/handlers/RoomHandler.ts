@@ -81,6 +81,9 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
       payload: { player: { id: player.id, username: player.username, color: player.color } },
     }, player.id);
 
+    // 系统消息：通知全房间有新玩家加入（包含加入者自己，让其看到欢迎语）
+    ctx.chatHandler.sendSystemMessage(room, `${username} 加入了房间`, [username]);
+
     room.broadcastExcept({
       type: 'room_updated',
       payload: { room: room.toSnapshot() },
@@ -89,6 +92,9 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
 
   handlers.set('leave_room', (_ws: WebSocket, _msg: ClientMessage, player: RoomPlayer, room: Room) => {
     try {
+      // 系统消息：通知全房间有玩家离开（在房间销毁前广播，确保消息能送达）
+      ctx.chatHandler.sendSystemMessage(room, `${player.username} 离开了房间`, [player.username]);
+
       removeUserSession(player.id);
       if (player.isOwner) {
         if (room.katagoGame) kataGoManager.destroySession(room.roomId);

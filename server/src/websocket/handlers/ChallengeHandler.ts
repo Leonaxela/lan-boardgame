@@ -26,6 +26,13 @@ export function registerChallengeHandlers(ctx: DispatcherContext, handlers: Map<
 
     room.challenge = { challengerId: player.id, createdAt: Date.now() };
 
+    // 系统消息：通知全房间有人发起挑战（含房主名字，观战者也能感知）
+    ctx.chatHandler.sendSystemMessage(
+      room,
+      `${player.username} 向房主 ${room.owner?.username || '房主'} 发起挑战`,
+      [player.username, room.owner?.username || '房主']
+    );
+
     const challengeTimer = setTimeout(() => {
       if (room.challenge?.challengerId === player.id) {
         room.sendTo(room.owner!.id, {
