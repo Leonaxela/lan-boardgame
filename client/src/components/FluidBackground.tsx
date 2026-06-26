@@ -26,12 +26,12 @@ export default function FluidBackground() {
     const SPLAT_RADIUS = 0.25;
     const SPLAT_FORCE = 6000;
     const PALETTE = [
-      [0.0, 0.47, 1.0],
-      [0.5, 0.0, 1.0],
-      [0.0, 1.0, 0.75],
-      [1.0, 0.2, 0.4],
-      [0.1, 0.8, 1.0],
-      [0.7, 0.0, 0.8],
+      [0.86, 0.70, 0.36],  /* 金色 — 主调 #dcb35c */
+      [0.96, 0.75, 0.30],  /* 暖琥珀 #f5bf4d */
+      [0.85, 0.55, 0.25],  /* 古铜 #d98c40 */
+      [0.75, 0.42, 0.20],  /* 深琥珀 #bf6b33 */
+      [0.95, 0.88, 0.55],  /* 浅金 #fae099 */
+      [0.82, 0.60, 0.32],  /* 暖棕 #d19952 */
     ];
 
     let textureUnit = 0;
@@ -305,21 +305,21 @@ export default function FluidBackground() {
     // ── Auto splats ──
     let lastSplat = 0;
     function autoSplat(t: number) {
-      if (t - lastSplat > 0.8) {
+      if (t - lastSplat > 1.5) {
         lastSplat = t;
         const ci = Math.floor(Math.random() * PALETTE.length);
         const c = PALETTE[ci];
-        splatAt(Math.random(), Math.random(), (Math.random()-0.5)*1500, (Math.random()-0.5)*1500,
-          { r: c[0]*0.06, g: c[1]*0.06, b: c[2]*0.06 });
+        splatAt(Math.random(), Math.random(), (Math.random()-0.5)*800, (Math.random()-0.5)*800,
+          { r: c[0]*0.03, g: c[1]*0.03, b: c[2]*0.03 });
       }
     }
 
     // ── Init splats ──
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 5; i++) {
       const c = PALETTE[i % PALETTE.length];
       splatAt(0.15+Math.random()*0.7, 0.15+Math.random()*0.7,
-        (Math.random()-0.5)*3000, (Math.random()-0.5)*3000,
-        { r: c[0]*0.2, g: c[1]*0.2, b: c[2]*0.2 });
+        (Math.random()-0.5)*1500, (Math.random()-0.5)*1500,
+        { r: c[0]*0.1, g: c[1]*0.1, b: c[2]*0.1 });
     }
 
     // ── Simulation ──
@@ -391,7 +391,7 @@ export default function FluidBackground() {
     let colorIdx = 0;
     function makeColor(): {r:number;g:number;b:number} {
       const c = PALETTE[colorIdx++ % PALETTE.length];
-      return { r: c[0]*0.15, g: c[1]*0.15, b: c[2]*0.15 };
+      return { r: c[0]*0.08, g: c[1]*0.08, b: c[2]*0.08 };
     }
     const ptr: Ptr = { id: -1, tx: 0, ty: 0, ptx: 0, pty: 0, dx: 0, dy: 0, down: false, moved: false, color: makeColor() };
 

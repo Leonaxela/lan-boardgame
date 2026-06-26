@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import adminRoutes from './routes/admin.js';
 import sgfRoutes from './routes/sgf.js';
 import gamesRoutes from './routes/games.js';
+import usersRoutes from './routes/users.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -25,6 +26,7 @@ async function start() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/sgf', sgfRoutes);
   app.use('/api/games', gamesRoutes);
+  app.use('/api/users', usersRoutes);
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
   });
@@ -52,5 +54,15 @@ function cleanupKataGo() {
 process.on('SIGINT', () => { cleanupKataGo(); process.exit(0); });
 process.on('SIGTERM', () => { cleanupKataGo(); process.exit(0); });
 process.on('exit', () => { cleanupKataGo(); });
+
+// ── 全局兜底：防止任意未捕获异常/拒绝直接拖垮进程 ──
+// 没有这两个 handler，WS 消息回调 / setTimeout / 事件回调里任何一次 throw
+// 都会让整个 Node 进程崩溃，表现为前端 vite 代理 ECONNREFUSED。
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] uncaughtException:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] unhandledRejection:', reason);
+});
 
 start().catch(console.error);

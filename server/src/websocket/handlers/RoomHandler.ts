@@ -88,40 +88,44 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
   });
 
   handlers.set('leave_room', (_ws: WebSocket, _msg: ClientMessage, player: RoomPlayer, room: Room) => {
-    removeUserSession(player.id);
-    if (player.isOwner) {
-      if (room.katagoGame) kataGoManager.destroySession(room.roomId);
-      removeActiveRoom(room.roomId);
-      logRoomDestroyed(room.roomId);
-      room.broadcast({
-        type: 'room_destroyed',
-        payload: { message: `👑 ${player.username} 离开房间，房间即将销毁` },
-      });
-      roomManager.destroyRoom(room.roomId);
-    } else {
-      const wasPlayer = room.players.some(p => p.id === player.id);
-      room.removePlayer(player.id);
-
-      if (wasPlayer && room.gameState?.phase === GamePhase.Playing) {
-        const engine = getEngine(room.gameType, room.config);
-        const result = engine.handleResign(room.gameState, player.color);
-        enrichGameResult(room, result);
-        room.gameState.phase = GamePhase.Finished;
-
+    try {
+      removeUserSession(player.id);
+      if (player.isOwner) {
+        if (room.katagoGame) kataGoManager.destroySession(room.roomId);
+        try { removeActiveRoom(room.roomId); } catch (e) { console.error('[leave_room] removeActiveRoom 失败:', e); }
+        logRoomDestroyed(room.roomId);
         room.broadcast({
-          type: 'game_over',
-          payload: { result, gameState: room.gameState, message: `${player.username} 离开房间，判负` },
+          type: 'room_destroyed',
+          payload: { message: `👑 ${player.username} 离开房间，房间即将销毁` },
         });
+        roomManager.destroyRoom(room.roomId);
       } else {
-        room.broadcast({
-          type: 'player_left',
-          payload: { playerId: player.id, username: player.username },
-        });
+        const wasPlayer = room.players.some(p => p.id === player.id);
+        room.removePlayer(player.id);
+
+        if (wasPlayer && room.gameState?.phase === GamePhase.Playing) {
+          const engine = getEngine(room.gameType, room.config);
+          const result = engine.handleResign(room.gameState, player.color);
+          enrichGameResult(room, result);
+          room.gameState.phase = GamePhase.Finished;
+
+          room.broadcast({
+            type: 'game_over',
+            payload: { result, gameState: room.gameState, message: `${player.username} 离开房间，判负` },
+          });
+        } else {
+          room.broadcast({
+            type: 'player_left',
+            payload: { playerId: player.id, username: player.username },
+          });
+        }
+        room.broadcastExcept({
+          type: 'room_updated',
+          payload: { room: room.toSnapshot() },
+        }, '');
       }
-      room.broadcastExcept({
-        type: 'room_updated',
-        payload: { room: room.toSnapshot() },
-      }, '');
+    } catch (e) {
+      console.error('[leave_room] 处理异常:', e);
     }
   });
 

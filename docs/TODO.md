@@ -1,6 +1,7 @@
 # 项目优化 TODO
 
 > 创建日期：2026-06-20
+> 最近更新：2026-06-26（大厅 UI 优化 + 后端崩溃修复 + 在线时长统计 bug 修复）
 
 ---
 
@@ -27,10 +28,11 @@
 - [ ] WebSocket 消息限制 — 无 maxPayload 设置，可发送超大消息耗尽内存
 - [ ] WebSocket 速率限制 — 无任何限流，恶意客户端可高频发送
 - [ ] admin/seed 无认证 — /api/admin/seed 可在无认证时创建管理员账号
-- [ ] ws.send 未检查 readyState — Dispatcher 多处直接发送未检查连接状态
+- [x] ws.send 未检查 readyState — Dispatcher 多处直接发送未检查连接状态（2026-06-26：Room.broadcast/broadcastExcept/sendTo/broadcastToPlayers、utils.sendError 已包 try/catch 并保留 readyState 检查）
 
 ### 资源管理
 
+- [x] **全局错误兜底** — 2026-06-26 新增。`index.ts` 加 `uncaughtException`/`unhandledRejection` handler；`WSServer` 消息分发与断连处理包 try/catch；`RoomHandler.leave_room` 整体包 try/catch。房主退出时 leave_room 与 close 事件并发触发，DB 写或 ws.send 抛错不再杀进程（vite 代理 ECONNREFUSED 已解决）
 - [ ] setTimeout 未清理 — scheduleKataGoMove、scheduleAIMove 的 timer ID 未存储，房间销毁后回调仍可能触发
 - [ ] HTTP 优雅关闭 — process.on('exit') 只清理 KataGo，HTTP 连接未 drain
 - [ ] 重启后活跃房间丢失 — 重启清空 active_rooms，进行中的游戏直接丢失（设计如此，但应文档化）
@@ -38,6 +40,7 @@
 ### 正确性
 
 - [ ] generateSGF komi 硬编码 3.75 — 与游戏配置中的 komi 不一致，应使用 room.config 中的值
+- [x] **在线时长统计 UPDATE 不命中** — 2026-06-26 修复。`WSServer.handleDisconnect` 原用 `WHERE id = player.id`，但 player.id 是房间会话 UUID（`crypto.randomUUID()`）非 DB users.id，UPDATE 永不命中。改为 `WHERE username = ?`（users.username 唯一）
 
 ## 运维层面
 
@@ -57,6 +60,9 @@
 
 ## 体验层面
 
+- [x] **大厅游戏卡片视觉优化** — 2026-06-26 完成。玻璃拟态卡片（backdrop-filter blur+saturate）、每游戏独立主题色（围棋=金/五子棋=青/中国象棋=红/国际象棋=紫/跳棋=绿）、悬停上浮+发光+底部装饰条、图标容器圆角背景框、在线状态胶囊脉冲标签、标题金色渐变投影
+- [x] **大厅背景星空粒子** — 2026-06-26 完成。新增 `StarfieldBackground.tsx`（Canvas 2D），三层视差星点（远90/中60/近30）独立闪烁缓慢漂移、金色主题配色、鼠标引力星座连线（鼠标→星 + 星↔星）、偶发金色流星带尾迹、DPR≤2 + 失焦暂停。替换原纯黑背景
+- [x] **登录页流体背景调色** — 2026-06-26 完成。`FluidBackground.tsx` PALETTE 从冷蓝紫改为暖金琥珀色系匹配全局金色主题，自动喷溅频率/力度降低，由"视觉焦点"转为"氛围背景"
 - [ ] 胜率曲线点击跳步 — 点击折线图跳到对应步数
 - [ ] 回看模式键盘快捷键 — 左右箭头切步
 - [ ] 移动端适配 — 其他 4 款游戏的 RoomPage

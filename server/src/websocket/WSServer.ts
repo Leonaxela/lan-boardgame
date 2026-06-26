@@ -49,12 +49,20 @@ export class GameWSServer {
         } catch (e) {
           // 非 JSON 消息，跳过 emoji 处理
         }
-        this.dispatcher.dispatch(ws, text);
+        try {
+          this.dispatcher.dispatch(ws, text);
+        } catch (e) {
+          console.error('[WS] 消息处理异常:', e);
+        }
       });
 
       ws.on('close', () => {
         console.log('[WS] 连接断开');
-        this.handleDisconnect(ws);
+        try {
+          this.handleDisconnect(ws);
+        } catch (e) {
+          console.error('[WS] 断开处理异常:', e);
+        }
       });
 
       ws.on('error', (err) => {
@@ -113,8 +121,14 @@ export class GameWSServer {
       const joined = player.joinedAt;
       if (joined) {
         const elapsed = Math.floor((Date.now() - joined) / 1000);
-        if (elapsed > 0 && elapsed < 86400) {
-          execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE id = ?', [elapsed, player.id]);
+        // 注意：player.id 是房间内会话 UUID（crypto.randomUUID），不是 DB users.id，
+        // 不能用 WHERE id = ?。username 在 users 表上唯一，按 username 匹配。
+        if (elapsed > 0 && elapsed < 86400 && player.username) {
+          try {
+            execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE username = ?', [elapsed, player.username]);
+          } catch (e) {
+            console.error('[WS] 更新在线时长失败:', e);
+          }
         }
       }
       removeUserSession(player.id);

@@ -55,10 +55,14 @@ export function updateClock(room: Room, playerColor: string): void {
 
 /** 发送错误消息 */
 export function sendError(ws: WebSocket, code: string, message: string): void {
-  ws.send(JSON.stringify({
-    type: 'error',
-    payload: { code, message },
-  }));
+  try {
+    ws.send(JSON.stringify({
+      type: 'error',
+      payload: { code, message },
+    }));
+  } catch (e) {
+    /* 连接异常，忽略 */
+  }
 }
 
 /** 补充游戏结果中赢家和输家的 id 和 name */

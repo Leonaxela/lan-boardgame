@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { modalAlert } from '../components/Modal';
 import { useFavicon } from '../hooks/useFavicon';
+import StarfieldBackground from '../components/StarfieldBackground';
+import UserProfileModal from '../components/UserProfileModal';
 import type { RoomInfo, GameInfo } from '@lan-boardgame/shared';
 
 export default function LobbyPage() {
@@ -19,6 +21,8 @@ export default function LobbyPage() {
   const totalPlayers = Object.values(gameStats).reduce((sum, g) => sum + g.players, 0);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [games, setGames] = useState<GameInfo[]>([]);
+  const [showProfile, setShowProfile] = useState(false);
+  const [bgEnabled, setBgEnabled] = useState(() => localStorage.getItem('lobby_bg') !== 'off');
 
   // 未登录重定向
   useEffect(() => { if (!token) nav('/login'); }, [token, nav]);
@@ -104,6 +108,7 @@ export default function LobbyPage() {
 
   return (
     <div className="lobby-page">
+      <StarfieldBackground enabled={bgEnabled} />
       <header className="lobby-header">
         <h1>游戏大厅</h1>
         <div className="lobby-header-left">
@@ -114,8 +119,21 @@ export default function LobbyPage() {
           共 <span className="stat-green">{totalPlayers}</span> 人在线
         </div>
         <div className="lobby-header-right">
-          <button className="btn-username">{username || '玩家'}</button>
-          <button className="btn-logout" onClick={() => nav('/login')}>退出</button>
+          <button
+            className="btn-username"
+            onClick={() => setShowProfile(true)}
+            title="查看个人资料"
+          >{username || '玩家'}</button>
+          <button className="btn-logout" onClick={() => nav('/login')} title="退出登录">退出</button>
+          <button
+            className="btn-bg-toggle"
+            onClick={() => {
+              const next = !bgEnabled;
+              setBgEnabled(next);
+              localStorage.setItem('lobby_bg', next ? 'on' : 'off');
+            }}
+            title={bgEnabled ? '关闭背景动效' : '开启背景动效'}
+          >{bgEnabled ? '✦' : '✧'}</button>
         </div>
       </header>
 
@@ -123,6 +141,7 @@ export default function LobbyPage() {
         {games.map(game => (
           <div
             key={game.id}
+            data-game={game.id}
             className={`game-card ${game.status === 'ready' ? 'card-ready' : 'card-coming'}`}
             onClick={() => openGame(game.id)}
           >
@@ -169,6 +188,10 @@ export default function LobbyPage() {
             <button className="btn-close" onClick={() => setShowDialog(false)}>关闭</button>
           </div>
         </div>
+      )}
+
+      {showProfile && username && (
+        <UserProfileModal username={username} onClose={() => setShowProfile(false)} />
       )}
     </div>
   );

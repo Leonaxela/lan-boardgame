@@ -114,7 +114,7 @@ export class Room {
     const data = JSON.stringify(message);
     for (const p of this.getAllPlayers()) {
       if (p.ws && p.ws.readyState === WebSocket.OPEN) {
-        p.ws.send(data);
+        try { p.ws.send(data); } catch (e) { /* 连接异常，忽略 */ }
       }
     }
   }
@@ -124,7 +124,7 @@ export class Room {
     const data = JSON.stringify(message);
     for (const p of this.getAllPlayers()) {
       if (p.id !== excludeId && p.ws && p.ws.readyState === WebSocket.OPEN) {
-        p.ws.send(data);
+        try { p.ws.send(data); } catch (e) { /* 连接异常，忽略 */ }
       }
     }
   }
@@ -133,7 +133,7 @@ export class Room {
   sendTo(playerId: string, message: object): void {
     const p = this.getAllPlayers().find(pl => pl.id === playerId);
     if (p && p.ws && p.ws.readyState === WebSocket.OPEN) {
-      p.ws.send(JSON.stringify(message));
+      try { p.ws.send(JSON.stringify(message)); } catch (e) { /* 连接异常，忽略 */ }
     }
   }
 
@@ -142,7 +142,7 @@ export class Room {
     const data = JSON.stringify(message);
     for (const p of this.players) {
       if (p.ws && p.ws.readyState === WebSocket.OPEN) {
-        p.ws.send(data);
+        try { p.ws.send(data); } catch (e) { /* 连接异常，忽略 */ }
       }
     }
   }
