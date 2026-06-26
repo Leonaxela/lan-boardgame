@@ -162,6 +162,18 @@ export default function AdminDashboard() {
     loadUsers(userPage, userSearch);
   };
 
+  /** 设置用户头像状态：approved / forbidden / locked */
+  const setAvatarStatus = async (userId: string, status: 'approved' | 'forbidden' | 'locked') => {
+    const d = await api(`/api/admin/users/${userId}/avatar-status`, { method: 'PUT', body: JSON.stringify({ status }) });
+    if (d.success) {
+      // 更新 userForm 中的头像状态
+      setUserForm((f: any) => ({ ...f, avatar_status: status, avatar_path: status === 'forbidden' || status === 'locked' ? null : f.avatar_path }));
+      loadUsers(userPage, userSearch);
+    } else {
+      alert(d.error || '操作失败');
+    }
+  };
+
   const renderTab = () => {
     switch (tab) {
       case 'dashboard':
@@ -272,6 +284,47 @@ export default function AdminDashboard() {
               <div className="modal-overlay" onClick={() => setEditingUser(null)}>
                 <div className="modal-content" onClick={e => e.stopPropagation()} style={{ width: 480 }}>
                   <h2>{editingUser === 'new' ? '添加用户' : '编辑用户'}</h2>
+
+                  {/* 头像预览 + 审核按钮（仅编辑已有用户时显示） */}
+                  {editingUser !== 'new' && (
+                    <div className="admin-avatar-section">
+                      <div className="admin-avatar-preview">
+                        {userForm.avatar_path ? (
+                          <img src={`/api/avatars/${encodeURIComponent(userForm.avatar_path)}?t=${Date.now()}`} alt="avatar" className="admin-avatar-img" />
+                        ) : (
+                          <span className="admin-avatar-placeholder">
+                            {(userForm.nickname || userForm.username || '?').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                      <div className="admin-avatar-controls">
+                        <div className="admin-avatar-status">
+                          状态：{
+                            userForm.avatar_status === 'locked' ? <span className="avatar-status-tag locked">🔒 锁定</span> :
+                            userForm.avatar_path ? <span className="avatar-status-tag approved">✅ 允许</span> :
+                            <span className="avatar-status-tag none">无头像</span>
+                          }
+                        </div>
+                        <div className="admin-avatar-buttons">
+                          <button
+                            className="btn-avatar-action approve"
+                            onClick={() => setAvatarStatus(editingUser, 'approved')}
+                          >允许</button>
+                          <button
+                            className="btn-avatar-action forbid"
+                            onClick={async () => { if (await modalConfirm('确定<span class="danger">禁止</span>该用户头像？将清空当前头像，<span class="danger">用户可重新上传</span>。')) setAvatarStatus(editingUser, 'forbidden'); }}
+                            disabled={!userForm.avatar_path}
+                          >禁止</button>
+                          <button
+                            className="btn-avatar-action lock"
+                            onClick={async () => { if (await modalConfirm('确定<span class="danger">锁定</span>该用户头像权限？将清空当前头像且<span class="danger">用户不能再改</span>。')) setAvatarStatus(editingUser, 'locked'); }}
+                            disabled={userForm.avatar_status === 'locked'}
+                          >锁定</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {editingUser === 'new' && (
                     <>
                       <label>用户名</label>

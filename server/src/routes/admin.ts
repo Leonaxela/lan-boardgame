@@ -3,6 +3,12 @@ import bcrypt from 'bcryptjs';
 import { queryOne, execute, queryAll, uuid } from '../db/connection.js';
 import { signToken, authenticate, requireAdmin } from '../middleware/auth.js';
 import { getOnlineCount, getOnlineUsers } from '../room/RoomPersistence.js';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync, renameSync } from 'fs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const AVATAR_DIR = join(__dirname, '..', '..', 'data', 'avatars');
 
 const router = Router();
 
@@ -133,7 +139,7 @@ router.get('/users', authenticate, requireAdmin, (req: Request, res: Response) =
   const total = totalRow?.c ?? 0;
 
   const users = queryAll(
-    `SELECT id, username, role, nickname, birth_date, gender, hometown, occupation, hobbies,
+    `SELECT id, username, role, nickname, avatar_path, avatar_status, birth_date, gender, hometown, occupation, hobbies,
             total_games, win_games, last_online_at, total_online_seconds, created_at, banned
      FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset]
@@ -212,6 +218,55 @@ router.delete('/users/:id', authenticate, requireAdmin, (req: Request, res: Resp
   if (user.role === 'admin') { res.status(403).json({ error: '不能删除管理员' }); return; }
   execute('DELETE FROM users WHERE id = ?', [id]);
   res.json({ success: true });
+});
+
+/**
+ * PUT /api/admin/users/:id/avatar-status
+ * 管理员设置用户头像状态。
+ * body: { status: 'approved' | 'forbidden' | 'locked' }
+ * - approved: 恢复头像权限（解锁）
+ * - forbidden: 清空当前头像（文件重命名保留审计），用户可重新上传
+ * - locked: 清空当前头像（文件重命名保留审计），用户不能再改头像
+ */
+router.put('/users/:id/avatar-status', authenticate, requireAdmin, (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { status } = req.body as { status: string };
+
+  if (!['approved', 'forbidden', 'locked'].includes(status)) {
+    res.status(400).json({ error: '无效的状态，可选：approved / forbidden / locked' });
+    return;
+  }
+
+  const user = queryOne<{ id: string; username: string; avatar_path: string | null; avatar_status: string }>(
+    'SELECT id, username, avatar_path, avatar_status FROM users WHERE id = ?',
+    [id]
+  );
+  if (!user) { res.status(404).json({ error: '用户不存在' }); return; }
+
+  // 禁止/锁定：清空当前头像，文件重命名保留
+  if ((status === 'forbidden' || status === 'locked') && user.avatar_path) {
+    const oldPath = join(AVATAR_DIR, user.avatar_path);
+    if (existsSync(oldPath)) {
+      // 文件名格式：原文件名.时间戳.禁止/锁定.扩展名
+      const dotIdx = user.avatar_path.lastIndexOf('.');
+      const baseName = dotIdx > 0 ? user.avatar_path.slice(0, dotIdx) : user.avatar_path;
+      const ext = dotIdx > 0 ? user.avatar_path.slice(dotIdx) : '';
+      const tag = status === 'forbidden' ? '禁止' : '锁定';
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const newName = `${baseName}.${ts}.${tag}${ext}`;
+      try {
+        renameSync(oldPath, join(AVATAR_DIR, newName));
+      } catch (e) {
+        console.error('[admin] 重命名头像文件失败:', e);
+      }
+    }
+    execute('UPDATE users SET avatar_path = NULL, avatar_status = ? WHERE id = ?', [status, id]);
+  } else if (status === 'approved') {
+    // 允许：解锁（不清空头像，如果有的话保留）
+    execute('UPDATE users SET avatar_status = ? WHERE id = ?', ['approved', id]);
+  }
+
+  res.json({ success: true, avatarStatus: status });
 });
 
 /**

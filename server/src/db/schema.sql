@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash       TEXT NOT NULL,
   role                TEXT NOT NULL DEFAULT 'user',
   nickname            TEXT,
+  avatar_path         TEXT,                -- 头像文件名（实际文件存在 server/data/avatars/）
+  avatar_status       TEXT NOT NULL DEFAULT 'approved', -- 头像状态：approved(允许) / locked(锁定)
   birth_date          TEXT,                -- 出生日期 YYYY-MM-DD
   gender              TEXT,                -- male / female / other
   hometown            TEXT,                -- 籍贯

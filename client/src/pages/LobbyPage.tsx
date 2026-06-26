@@ -191,7 +191,7 @@ export default function LobbyPage() {
       )}
 
       {showProfile && username && (
-        <UserProfileModal username={username} onClose={() => setShowProfile(false)} />
+        <UserProfileModal username={username} isMe onClose={() => setShowProfile(false)} />
       )}
     </div>
   );

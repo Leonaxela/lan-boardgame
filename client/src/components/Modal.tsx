@@ -9,6 +9,7 @@ let showConfirm: ConfirmFn = async () => false;
 
 /**
  * 全局弹窗容器（放在 App 根级别）。
+ * z-index 设为 1000，高于业务弹窗的 100，避免被盖住。
  */
 export function ModalContainer() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function ModalContainer() {
     <>
       {/* 提示弹窗 */}
       {alertMsg && (
-        <div className="modal-overlay" onClick={() => setAlertMsg(null)}>
+        <div className="modal-overlay modal-top" onClick={() => setAlertMsg(null)}>
           <div className="modal-content modal-alert" onClick={e => e.stopPropagation()}>
             <p>{alertMsg}</p>
             <button className="btn-primary" onClick={() => setAlertMsg(null)}>确定</button>
@@ -47,9 +48,9 @@ export function ModalContainer() {
       )}
       {/* 确认弹窗 */}
       {confirmMsg && (
-        <div className="modal-overlay" onClick={() => handleConfirm(false)}>
+        <div className="modal-overlay modal-top" onClick={() => handleConfirm(false)}>
           <div className="modal-content modal-confirm" onClick={e => e.stopPropagation()}>
-            <p>{confirmMsg}</p>
+            <p dangerouslySetInnerHTML={{ __html: confirmMsg }} />
             <div className="confirm-buttons">
               <button className="confirm-btn confirm-yes" onClick={() => handleConfirm(true)}>确定</button>
               <button className="confirm-btn confirm-no" onClick={() => handleConfirm(false)}>取消</button>

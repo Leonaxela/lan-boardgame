@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 interface UserProfileModalProps {
   username: string;
+  isMe?: boolean;
   onClose: () => void;
 }
 
@@ -9,6 +10,8 @@ interface ProfileData {
   user: {
     username: string;
     nickname: string;
+    avatarPath: string | null;
+    avatarStatus: string;
     createdAt: string;
     lastOnlineAt: string | null;
     totalOnlineSeconds: number;
@@ -83,13 +86,44 @@ function formatDate(d: string | null): string {
   return d.replace('T', ' ').slice(0, 16);
 }
 
-export default function UserProfileModal({ username, onClose }: UserProfileModalProps) {
+/** 压缩图片到指定尺寸，返回 JPEG data URI */
+function compressImage(file: File, w: number, h: number, quality: number): Promise<string | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(null); return; }
+        // 居中裁剪
+        const scale = Math.max(w / img.width, h / img.height);
+        const sw = w / scale;
+        const sh = h / scale;
+        const sx = (img.width - sw) / 2;
+        const sy = (img.height - sh) / 2;
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => resolve(null);
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+export default function UserProfileModal({ username, isMe = false, onClose }: UserProfileModalProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [records, setRecords] = useState<RecordsData | null>(null);
   const [page, setPage] = useState(1);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
@@ -124,6 +158,46 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
 
   const maxHeat = profile?.heatByGame?.[0]?.count || 1;
 
+  /** 头像 URL：有 avatarPath 用文件，否则 undefined（首字母占位） */
+  const avatarUrl = profile?.user?.avatarPath
+    ? `/api/avatars/${encodeURIComponent(profile.user.avatarPath)}?t=${Date.now()}`
+    : undefined;
+
+  /** 头像是否可上传：自己的资料且未被锁定 */
+  const canUpload = isMe && profile?.user?.avatarStatus !== 'locked';
+
+  /** 选择文件 → canvas 压缩 128x128 → 上传 */
+  const handleAvatarChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // 允许重复选同一文件
+
+    // 压缩
+    const dataUrl = await compressImage(file, 256, 256, 0.92);
+    if (!dataUrl) { setError('图片处理失败'); return; }
+
+    setUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/users/avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ avatar: dataUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || '上传失败'); return; }
+      // 刷新 profile
+      loadProfile();
+    } catch {
+      setError('网络错误');
+    } finally {
+      setUploading(false);
+    }
+  }, [loadProfile]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content user-profile-modal" onClick={e => e.stopPropagation()}>
@@ -137,9 +211,24 @@ export default function UserProfileModal({ username, onClose }: UserProfileModal
         ) : profile ? (
           <>
             <div className="user-profile-header">
-              <div className="user-profile-avatar">
-                {profile.user.nickname.charAt(0).toUpperCase()}
+              <div
+                className={`user-profile-avatar ${canUpload ? 'avatar-clickable' : ''}`}
+                onClick={() => canUpload && !uploading && fileInputRef.current?.click()}
+                title={canUpload ? (uploading ? '上传中...' : '点击更换头像') : (profile?.user?.avatarStatus === 'locked' ? '头像权限已锁定' : undefined)}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="avatar" className="user-avatar-img" />
+                ) : (
+                  <span>{profile.user.nickname.charAt(0).toUpperCase()}</span>
+                )}
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                style={{ display: 'none' }}
+                onChange={canUpload ? handleAvatarChange : undefined}
+              />
               <div className="user-profile-info">
                 <h2 className="user-profile-name">{profile.user.nickname}</h2>
                 <p className="user-profile-sub">@{profile.user.username}</p>
