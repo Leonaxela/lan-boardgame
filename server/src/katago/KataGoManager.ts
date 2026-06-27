@@ -438,6 +438,11 @@ export class KataGoManager {
     return this.sessions.get(roomId)?.config ?? null;
   }
 
+  /** 检查是否有任何活跃会话 */
+  hasAnySession(): boolean {
+    return this.sessions.size > 0;
+  }
+
   /** 销毁所有会话（Server 退出时调用） */
   destroyAll(): void {
     for (const roomId of this.sessions.keys()) {

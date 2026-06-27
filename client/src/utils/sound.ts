@@ -12,6 +12,28 @@ function getCtx(): AudioContext {
 }
 
 /**
+ * 播放落子音效（短促的下降音）。
+ * 复用 AudioContext 实例，避免每次新建导致音量不一致。
+ */
+export function playMoveSound() {
+  try {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.1);
+  } catch {}
+}
+
+/**
  * 播放胜利音效（一段上升的琶音）。
  */
 export function playVictorySound() {

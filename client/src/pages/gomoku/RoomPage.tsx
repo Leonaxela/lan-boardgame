@@ -98,10 +98,12 @@ export default function GomokuRoomPage() {
   };
 
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showGameOver, setShowGameOver] = useState(false);
   const [aiDifficulty, setAiDifficulty] = useState(2);
   const [showDiffInfo, setShowDiffInfo] = useState(false);
   const [guessNumber, setGuessNumber] = useState('');
   const lastResultRef = useRef<any>(null);
+  const gameOverDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 移动端抽屉状态
   const [mobileSidebar, setMobileSidebar] = useState(false);
@@ -116,6 +118,19 @@ export default function GomokuRoomPage() {
         setShowConfetti(true);
         playVictorySound();
         setTimeout(() => setShowConfetti(false), 4500);
+      }
+      // 五子连珠：延迟 2s 弹窗，先看红圈动画
+      if (gameResult.winLine && gameResult.winLine.length >= 5) {
+        setShowGameOver(false);
+        gameOverDelayRef.current = setTimeout(() => setShowGameOver(true), 2000);
+      } else {
+        setShowGameOver(true);
+      }
+    } else {
+      setShowGameOver(false);
+      if (gameOverDelayRef.current) {
+        clearTimeout(gameOverDelayRef.current);
+        gameOverDelayRef.current = null;
       }
     }
   }, [gameResult, myId, myColor]);
@@ -213,7 +228,8 @@ export default function GomokuRoomPage() {
                     <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 8, background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '10px 14px', width: 180, fontSize: 12, lineHeight: 1.6, color: '#ccc', zIndex: 100, whiteSpace: 'nowrap' }}>
                       <div><b>简单</b> — 入门级</div>
                       <div><b>普通</b> — 业余初级</div>
-                      <div><b>困难</b> — 业余中级</div>
+                      <div><b>中等</b> — 业余中级</div>
+                      <div><b>困难</b> — 业余中高级，有前瞻</div>
                     </div>
                   )}
                 </span>
@@ -273,6 +289,7 @@ export default function GomokuRoomPage() {
               onPlace={handlePlace}
               width={boardPx.w}
               height={boardPx.h}
+              winLine={gameResult?.winLine ?? null}
             />
             <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
               {gameState.phase === 'playing' ? (
@@ -319,9 +336,9 @@ export default function GomokuRoomPage() {
           </div>
         )}
 
-        {/* 终局弹窗 */}
+        {/* 终局弹窗（五子连珠时延迟 2s，先播红圈脉冲动画） */}
         <Confetti active={showConfetti} />
-        {gameResult && (
+        {showGameOver && gameResult && (
           <div className="modal-overlay">
             <div className="modal-content game-over-modal">
               <h2>{winnerText}</h2>

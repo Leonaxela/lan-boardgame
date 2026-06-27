@@ -96,12 +96,13 @@ export class GomokuEngine implements IGameEngine {
 
     // 检查最新一步是否五子连珠
     if (state.lastMove) {
-      const winner = this.checkWin(state.board, state.lastMove);
-      if (winner) {
+      const winLine = this.checkWin(state.board, state.lastMove);
+      if (winLine) {
         return {
-          winner: { id: '', name: '', color: winner },
+          winner: { id: '', name: '', color: state.board[state.lastMove.row][state.lastMove.col]! },
           reason: WinReason.Score,
           scores: {},
+          winLine,
         };
       }
     }
@@ -163,14 +164,14 @@ export class GomokuEngine implements IGameEngine {
 
   /**
    * 从最后一步落子位置检查是否五子连珠。
-   * @returns 胜方颜色，或 null
+   * @returns 获胜线路（5颗棋子坐标），或 null
    */
-  private checkWin(board: (string | null)[][], lastMove: Position): string | null {
+  private checkWin(board: (string | null)[][], lastMove: Position): Position[] | null {
     const color = board[lastMove.row][lastMove.col];
     if (!color) return null;
 
     for (const dir of DIRECTIONS) {
-      let count = 1;
+      const line: Position[] = [{ row: lastMove.row, col: lastMove.col }];
 
       // 正方向
       for (let i = 1; i < 5; i++) {
@@ -178,7 +179,7 @@ export class GomokuEngine implements IGameEngine {
         const c = lastMove.col + dir.dc * i;
         if (r < 0 || r >= board.length || c < 0 || c >= board[0].length) break;
         if (board[r][c] !== color) break;
-        count++;
+        line.push({ row: r, col: c });
       }
 
       // 反方向
@@ -187,10 +188,13 @@ export class GomokuEngine implements IGameEngine {
         const c = lastMove.col - dir.dc * i;
         if (r < 0 || r >= board.length || c < 0 || c >= board[0].length) break;
         if (board[r][c] !== color) break;
-        count++;
+        line.unshift({ row: r, col: c });
       }
 
-      if (count >= 5) return color;
+      if (line.length >= 5) {
+        // 如果超过5颗（6连），取前5颗或后5颗
+        return line.length === 5 ? line : line.slice(0, 5);
+      }
     }
 
     return null;

@@ -161,104 +161,165 @@ body {
 }
 
 /* ── 游戏卡片：基础样式 ── */
+/* ── 苹果液态玻璃卡片 ── */
 .game-card {
   min-height: 200px;
   display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
   padding: 24px 16px 20px;
   text-align: center; cursor: pointer;
   position: relative;
-  border-radius: 16px;
-  background: linear-gradient(
-    165deg,
-    rgba(255,255,255,0.07) 0%,
-    rgba(255,255,255,0.02) 50%,
-    rgba(255,255,255,0.01) 100%
-  );
-  border: 1px solid rgba(255,255,255,0.09);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-radius: 20px;
+  /* 底层：极淡的磨砂底色 */
+  background: rgba(255, 255, 255, 0.04);
+  /* 液态边框：极细半透白边 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  /* 强磨砂透底 */
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  /* 悬浮阴影：多层叠加营造深度 */
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 8px 32px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition:
-    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.35s ease,
-    border-color 0.35s ease;
+    transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2),
+    box-shadow 0.4s ease,
+    border-color 0.4s ease,
+    background 0.4s ease;
   overflow: hidden;
 }
+
+/* 液态反光层（top-left 高光模拟玻璃折射） */
 .game-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 16px;
-  padding: 1px;
+  border-radius: 20px;
   background: linear-gradient(
-    160deg,
-    rgba(255,255,255,0.15) 0%,
-    transparent 40%,
-    transparent 60%,
-    rgba(255,255,255,0.03) 100%
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.03) 25%,
+    transparent 45%,
+    transparent 100%
   );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
   pointer-events: none;
+  z-index: 1;
+  transition: opacity 0.4s ease;
 }
-/* 底部装饰渐变条 */
+
+/* 底部主题色流光条 */
 .game-card::after {
   content: '';
   position: absolute;
   bottom: 0;
-  left: 10%; right: 10%;
+  left: 15%; right: 15%;
   height: 2px;
   border-radius: 2px;
-  opacity: 0.5;
-  transition: all 0.35s ease;
+  opacity: 0.35;
+  transition: all 0.4s ease;
+  filter: blur(1px);
+  z-index: 1;
 }
-.game-card:hover { transform: scale(1.06); }
 
-/* ── 各游戏主题色 ── */
-.game-card[data-game="go"]::after            { background: linear-gradient(90deg, #dcb35c, #f5d98a, #dcb35c); }
-.game-card[data-game="gomoku"]::after         { background: linear-gradient(90deg, #26c6da, #80deea, #26c6da); }
-.game-card[data-game="chinese-chess"]::after   { background: linear-gradient(90deg, #ef5350, #ff8a80, #ef5350); }
-.game-card[data-game="chess"]::after           { background: linear-gradient(90deg, #7c4dff, #b388ff, #7c4dff); }
-.game-card[data-game="draughts"]::after        { background: linear-gradient(90deg, #66bb6a, #a5d6a7, #66bb6a); }
+.game-card:hover {
+  transform: scale(1.04);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.game-card:hover::before { opacity: 1; }
+.game-card:hover::after { opacity: 0.7; filter: blur(0); }
 
-.game-card[data-game="go"].card-ready:hover            { border-color: rgba(220,179,92,0.45); box-shadow: 0 16px 48px rgba(220,179,92,0.15), 0 0 0 1px rgba(220,179,92,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
-.game-card[data-game="go"].card-ready:hover::after       { opacity: 1; left: 5%; right: 5%; height: 3px; box-shadow: 0 0 12px rgba(220,179,92,0.4); }
-.game-card[data-game="gomoku"].card-ready:hover         { border-color: rgba(38,198,218,0.45); box-shadow: 0 16px 48px rgba(38,198,218,0.15), 0 0 0 1px rgba(38,198,218,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
-.game-card[data-game="gomoku"].card-ready:hover::after    { opacity: 1; left: 5%; right: 5%; height: 3px; box-shadow: 0 0 12px rgba(38,198,218,0.4); }
-.game-card[data-game="chinese-chess"].card-ready:hover   { border-color: rgba(239,83,80,0.45); box-shadow: 0 16px 48px rgba(239,83,80,0.15), 0 0 0 1px rgba(239,83,80,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
-.game-card[data-game="chinese-chess"].card-ready:hover::after { opacity: 1; left: 5%; right: 5%; height: 3px; box-shadow: 0 0 12px rgba(239,83,80,0.4); }
-.game-card[data-game="chess"].card-ready:hover           { border-color: rgba(124,77,255,0.45); box-shadow: 0 16px 48px rgba(124,77,255,0.15), 0 0 0 1px rgba(124,77,255,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
-.game-card[data-game="chess"].card-ready:hover::after      { opacity: 1; left: 5%; right: 5%; height: 3px; box-shadow: 0 0 12px rgba(124,77,255,0.4); }
-.game-card[data-game="draughts"].card-ready:hover        { border-color: rgba(102,187,106,0.45); box-shadow: 0 16px 48px rgba(102,187,106,0.15), 0 0 0 1px rgba(102,187,106,0.1), inset 0 1px 0 rgba(255,255,255,0.08); }
-.game-card[data-game="draughts"].card-ready:hover::after   { opacity: 1; left: 5%; right: 5%; height: 3px; box-shadow: 0 0 12px rgba(102,187,106,0.4); }
+/* ── 各游戏主题色流光条 ── */
+.game-card[data-game="go"]::after            { background: linear-gradient(90deg, transparent, #dcb35c, #f5d98a, #dcb35c, transparent); }
+.game-card[data-game="gomoku"]::after         { background: linear-gradient(90deg, transparent, #26c6da, #80deea, #26c6da, transparent); }
+.game-card[data-game="chinese-chess"]::after   { background: linear-gradient(90deg, transparent, #ef5350, #ff8a80, #ef5350, transparent); }
+.game-card[data-game="chess"]::after           { background: linear-gradient(90deg, transparent, #7c4dff, #b388ff, #7c4dff, transparent); }
+.game-card[data-game="draughts"]::after        { background: linear-gradient(90deg, transparent, #66bb6a, #a5d6a7, #66bb6a, transparent); }
+
+/* ── hover 时各游戏主题光晕 ── */
+.game-card[data-game="go"].card-ready:hover {
+  border-color: rgba(220,179,92,0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(220,179,92,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.game-card[data-game="go"].card-ready:hover::after       { opacity: 0.85; left: 8%; right: 8%; height: 2px; filter: blur(0); box-shadow: 0 0 20px rgba(220,179,92,0.5); }
+
+.game-card[data-game="gomoku"].card-ready:hover {
+  border-color: rgba(38,198,218,0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(38,198,218,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.game-card[data-game="gomoku"].card-ready:hover::after    { opacity: 0.85; left: 8%; right: 8%; height: 2px; filter: blur(0); box-shadow: 0 0 20px rgba(38,198,218,0.5); }
+
+.game-card[data-game="chinese-chess"].card-ready:hover {
+  border-color: rgba(239,83,80,0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(239,83,80,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.game-card[data-game="chinese-chess"].card-ready:hover::after { opacity: 0.85; left: 8%; right: 8%; height: 2px; filter: blur(0); box-shadow: 0 0 20px rgba(239,83,80,0.5); }
+
+.game-card[data-game="chess"].card-ready:hover {
+  border-color: rgba(124,77,255,0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(124,77,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.game-card[data-game="chess"].card-ready:hover::after      { opacity: 0.85; left: 8%; right: 8%; height: 2px; filter: blur(0); box-shadow: 0 0 20px rgba(124,77,255,0.5); }
+
+.game-card[data-game="draughts"].card-ready:hover {
+  border-color: rgba(102,187,106,0.35);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.3),
+    0 0 60px rgba(102,187,106,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.game-card[data-game="draughts"].card-ready:hover::after   { opacity: 0.85; left: 8%; right: 8%; height: 2px; filter: blur(0); box-shadow: 0 0 20px rgba(102,187,106,0.5); }
 
 .card-ready { cursor: pointer; }
-.card-coming { opacity: 0.45; cursor: not-allowed; backdrop-filter: blur(8px); }
-.card-coming:hover { transform: none !important; border-color: rgba(255,255,255,0.12) !important; box-shadow: none !important; }
+.card-coming { opacity: 0.35; cursor: not-allowed; backdrop-filter: blur(12px); }
+.card-coming:hover { transform: none !important; border-color: rgba(255,255,255,0.12) !important; box-shadow: 0 2px 8px rgba(0,0,0,0.15), 0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.06) !important; }
 
 /* 图标容器 */
 .game-icon {
   width: 64px; height: 64px; margin: 0 auto 14px;
   display: flex; align-items: center; justify-content: center;
-  border-radius: 16px;
-  background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01));
-  border: 1px solid rgba(255,255,255,0.08);
-  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1.2), background 0.4s ease;
   position: relative;
+  z-index: 2;
 }
 .game-icon svg { width: 42px; height: 42px; }
 .card-ready:hover .game-icon { transform: scale(1.1); }
 
-/* 文字层次 */
+/* 文字层次（z-index 需高于 ::before 液态反光层） */
 .game-card h2 {
-  font-size: 20px; font-weight: 700; color: #f0f0f0; margin-bottom: 6px;
+  font-size: 20px; font-weight: 700; color: #f5f5f5; margin-bottom: 6px;
   letter-spacing: 1px;
+  position: relative; z-index: 2;
 }
 .game-card > p {
-  font-size: 13px; color: rgba(255,255,255,0.35);
+  font-size: 13px; color: rgba(255,255,255,0.4);
   line-height: 1.5;
   flex: 1;
+  position: relative; z-index: 2;
 }
 .game-stats {
   font-size: 12px !important;
@@ -271,6 +332,7 @@ body {
   display: inline-block;
   letter-spacing: 0.3px !important;
   animation: statsPulse 2.5s ease-in-out infinite;
+  position: relative; z-index: 2;
 }
 @keyframes statsPulse {
   0%, 100% { opacity: 1; }
@@ -292,28 +354,109 @@ body {
 }
 
 /* ─── 弹窗 ─── */
+/* ── 液态玻璃弹窗 ── */
 .modal-overlay {
   position: fixed; inset: 0;
-  background: rgba(0,0,0,0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center; z-index: 100;
   animation: fadeIn 0.2s;
 }
-/* 全局确认/提示弹窗置于业务弹窗之上 */
 .modal-overlay.modal-top { z-index: 1000; }
 .modal-confirm .danger { color: #ef5350; font-weight: 700; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-.modal-content {
-  background: linear-gradient(145deg, #1a1a3e, #0f0f2a);
-  border: 1px solid rgba(220,179,92,0.15);
-  border-radius: 16px; padding: 28px; width: 420px;
-  max-height: 80vh; overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-  animation: slideUp 0.25s ease-out;
-}
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ── 用户资料弹窗 ── */
+.modal-content {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px; padding: 32px; width: 420px;
+  max-height: 80vh; overflow-y: auto;
+  backdrop-filter: blur(28px) saturate(1.3);
+  -webkit-backdrop-filter: blur(28px) saturate(1.3);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.2),
+    0 16px 48px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  animation: slideUp 0.3s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+/* 弹窗顶部反光 */
+.modal-content::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 30%, transparent 50%);
+  pointer-events: none; z-index: 0;
+}
+.modal-content > * { position: relative; z-index: 1; }
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(24px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+.modal-content h2 {
+  font-size: 20px; font-weight: 700; color: #f5f5f5; margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* 房间列表分隔线 */
+.room-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 16px 0; }
+.room-empty { text-align: center; padding: 20px 0; font-size: 14px; color: rgba(255,255,255,0.25); }
+.room-list { margin-bottom: 8px; }
+.room-list h3 { font-size: 14px; color: rgba(255,255,255,0.35); margin-bottom: 8px; }
+
+.room-list-item {
+  display: flex; align-items: center; padding: 12px 14px;
+  border-radius: 12px; margin-bottom: 4px; cursor: pointer;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  gap: 8px; transition: all 0.25s ease;
+}
+.room-list-item:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(220,179,92,0.15);
+  box-shadow: 0 0 24px rgba(220,179,92,0.06);
+  transform: translateX(4px);
+}
+.room-owner { flex: 1; font-size: 14px; color: #e0e0e0; }
+.room-count { font-size: 13px; color: rgba(255,255,255,0.35); }
+
+/* 主按钮：液态玻璃风格 */
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f5f5f5; font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px; font-size: 15px; cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(8px);
+}
+.btn-primary:hover {
+  background: rgba(220, 179, 92, 0.15);
+  border-color: rgba(220, 179, 92, 0.3);
+  color: #dcb35c;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(220,179,92,0.15);
+}
+
+.btn-close {
+  width: 100%; padding: 12px;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.45);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px; font-size: 14px; cursor: pointer;
+  transition: all 0.2s; margin-top: 12px;
+}
+.btn-close:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.12); }
+
+.btn-small {
+  padding: 5px 14px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; font-size: 12px; cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-small:hover { background: rgba(220,179,92,0.12); border-color: rgba(220,179,92,0.25); color: #dcb35c; }
 .user-profile-modal {
   width: 720px; max-width: 92vw;
   padding: 32px;
@@ -489,9 +632,6 @@ body {
 @keyframes katago-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes katago-progress { 0% { width: 10%; } 50% { width: 80%; } 100% { width: 10%; } }
 @keyframes katago-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
-.modal-content h2 {
-  font-size: 20px; color: #dcb35c; margin-bottom: 16px;
-}
 .modal-content label { display: block; font-size: 13px; color: rgba(255,255,255,0.5); margin: 12px 0 4px; }
 .modal-content input, .modal-content select {
   width: 100%; padding: 10px 14px;
@@ -531,42 +671,6 @@ body {
 .confirm-no { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.12); }
 .confirm-no:hover { background: rgba(255,255,255,0.1); color: #fff; }
 .modal-alert p, .modal-confirm p { font-size: 15px; line-height: 1.6; margin-bottom: 12px; color: #e0e0e0; }
-
-.btn-primary {
-  width: 100%; padding: 12px;
-  background: linear-gradient(135deg, #dcb35c, #c9a04a);
-  color: #1a1a2e; font-weight: 600;
-  border: none; border-radius: 10px; font-size: 15px; cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(220,179,92,0.25); }
-.btn-close {
-  width: 100%; padding: 12px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
-  color: rgba(255,255,255,0.5); font-size: 15px; font-weight: 600; cursor: pointer;
-  transition: 0.2s;
-}
-.btn-close:hover { background: rgba(255,255,255,0.1); color: #fff; }
-.room-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0; }
-.room-empty { text-align: center; padding: 20px 0; font-size: 14px; }
-.room-list { margin-bottom: 8px; }
-.room-list h3 { font-size: 14px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
-.room-list-item {
-  display: flex; align-items: center; padding: 10px 14px;
-  border-radius: 10px; margin-bottom: 4px; cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.06); gap: 8px; transition: 0.2s;
-}
-.room-list-item:hover { background: rgba(255,255,255,0.05); border-color: rgba(220,179,92,0.2); }
-.room-owner { flex: 1; font-size: 14px; color: #e0e0e0; }
-.room-count { font-size: 13px; color: rgba(255,255,255,0.4); }
-.btn-small {
-  padding: 4px 12px;
-  background: rgba(220,179,92,0.15);
-  color: #dcb35c;
-  border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
-}
-.btn-small:hover { background: rgba(220,179,92,0.25); }
 
 /* ─── 房间页面（三栏布局） ─── */
 .room-page { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: #0a0a1a; }

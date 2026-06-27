@@ -35,6 +35,8 @@ interface GameResult {
   winner: { id: string; name: string; color: string } | null;
   reason: string;
   scores: Record<string, number>;
+  /** 五子棋获胜线路（5颗棋子坐标） */
+  winLine?: { row: number; col: number }[];
 }
 
 export function useRoom() {

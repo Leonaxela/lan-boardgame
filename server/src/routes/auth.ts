@@ -79,7 +79,23 @@ router.post('/login', (req: Request, res: Response) => {
     return;
   }
 
+  // 检查是否已在其他设备登录（user_sessions 中有该用户名的活跃记录）
+  const existingSession = queryOne(
+    'SELECT 1 FROM user_sessions WHERE username = ?',
+    [username]
+  );
+  if (existingSession) {
+    res.status(409).json({ error: '账号已在其他设备在线，请先退出后再登录' });
+    return;
+  }
+
   const token = signToken({ userId: user.id, username: user.username, role: user.role });
+
+  // 写入登录 session（标记在线状态，后续 WS 断开时清理）
+  execute(
+    'INSERT INTO user_sessions (user_id, username, room_id, last_ping) VALUES (?, ?, NULL, datetime(\'now\', \'localtime\'))',
+    [user.id, username]
+  );
 
   res.json({
     token,

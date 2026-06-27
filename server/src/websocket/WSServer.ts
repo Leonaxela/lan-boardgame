@@ -132,6 +132,12 @@ export class GameWSServer {
         }
       }
       removeUserSession(player.id);
+      // 同时清理 login 时写入的 session（user_id=users.id, username=player.username）
+      try {
+        execute('DELETE FROM user_sessions WHERE username = ?', [player.username]);
+      } catch (e) {
+        console.error('[WS] 清理登录 session 失败:', e);
+      }
     }
 
     if (!room || !player) return;

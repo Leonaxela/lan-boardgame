@@ -57,8 +57,10 @@ async function start() {
 
 // 退出时清理所有 KataGo 子进程
 function cleanupKataGo() {
-  console.log('[Server] 正在关闭 KataGo 进程...');
-  kataGoManager.destroyAll();
+  if (kataGoManager.hasAnySession()) {
+    console.log('[Server] 正在关闭 KataGo 进程...');
+    kataGoManager.destroyAll();
+  }
 }
 
 process.on('SIGINT', () => { cleanupKataGo(); process.exit(0); });

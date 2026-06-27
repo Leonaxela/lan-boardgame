@@ -68,4 +68,6 @@ export interface GameResult {
   winner: Player | null;   // null = 平局
   reason: WinReason;
   scores: Record<string, number>;  // playerId → 分数
+  /** 五子棋获胜线路（5颗棋子坐标），其他游戏为 undefined */
+  winLine?: { row: number; col: number }[];
 }

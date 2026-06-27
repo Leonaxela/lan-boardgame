@@ -1,22 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
-
-/** 落子音效 */
-function playMoveSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(800, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.1);
-  } catch {}
-}
+import { playMoveSound } from '../../utils/sound';
 
 interface GomokuBoardProps {
   board: (string | null)[][];
@@ -27,6 +10,8 @@ interface GomokuBoardProps {
   onPlace: (row: number, col: number) => void;
   width?: number;
   height?: number;
+  /** 终局高亮：获胜的5颗棋子坐标 */
+  winLine?: { row: number; col: number }[] | null;
 }
 
 const COLORS = {
@@ -35,13 +20,15 @@ const COLORS = {
   BLACK: '#1a1a1a',
   WHITE: '#f5f5f5',
   LAST_MOVE: '#f44336',
+  WIN_RING: '#ff1744',
 };
 
 export default function GomokuBoard({
-  board, boardSize, lastMove, myColor, isMyTurn, onPlace, width = 500, height = 500,
+  board, boardSize, lastMove, myColor, isMyTurn, onPlace, width = 500, height = 500, winLine = null,
 }: GomokuBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const hoverRef = useRef<{ row: number; col: number } | null>(null);
+  const animProgressRef = useRef(0);
 
   const padding = 30;
   const cellSize = Math.min(
@@ -147,6 +134,24 @@ export default function GomokuBoard({
       }
     }
 
+    // 终局高亮：获胜的5颗棋子用红圈标识，带脉冲动画
+    if (winLine && winLine.length >= 5) {
+      ctx.strokeStyle = COLORS.WIN_RING;
+      ctx.lineWidth = Math.max(2, cellSize * 0.1);
+      // 脉冲缩放：动画阶段红圈先大后正常，2秒后稳定
+      const pulse = 1 + Math.sin(Math.min(animProgressRef.current, 1) * Math.PI * 5) * 0.12 * Math.max(0, 1 - animProgressRef.current);
+      for (const p of winLine) {
+        const wr = transformRow(p.row);
+        const wc = transformCol(p.col);
+        const wx = offsetX + wc * cellSize;
+        const wy = offsetY + wr * cellSize;
+        const wRadius = (cellSize * 0.43 + 2) * pulse;
+        ctx.beginPath();
+        ctx.arc(wx, wy, wRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
     // 最后一步标记
     if (lastMove) {
       const lr = transformRow(lastMove.row);
@@ -170,7 +175,7 @@ export default function GomokuBoard({
         ctx.fill();
       }
     }
-  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol]);
+  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol, winLine]);
 
   useEffect(() => { draw(hoverRef.current); }, [draw]);
 
@@ -201,6 +206,27 @@ export default function GomokuBoard({
       canvas.removeEventListener('click', handleClick);
     };
   }, [board, isMyTurn, onPlace, pixelToBoard, draw]);
+
+  // 五子连珠红圈脉冲动画（2 秒后衰减为固定圈）
+  useEffect(() => {
+    if (!winLine || winLine.length < 5) {
+      animProgressRef.current = 0;
+      return;
+    }
+    const start = Date.now();
+    const duration = 2000; // 2 秒动画
+    let raf: number;
+    const tick = () => {
+      const elapsed = (Date.now() - start) / 1000;
+      animProgressRef.current = elapsed; // 0→递增，2秒后 > 2
+      draw(hoverRef.current);
+      if (elapsed < duration) {
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [winLine, draw]);
 
   return (
     <canvas
