@@ -6,7 +6,7 @@ interface Point {
 export default function LineChart({ data, width = 500, height = 220, highlightIndex, onStepClick }: { data: Point[]; width?: number; height?: number; highlightIndex?: number; onStepClick?: (index: number) => void }) {
   if (data.length === 0) return <p style={{ padding: 40, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: 14 }}>暂无数据</p>;
 
-  const pad = { top: 24, right: 8, bottom: width < 250 ? 20 : 32, left: width < 250 ? 30 : 50 };
+  const pad = { top: 24, right: width < 250 ? 20 : 40, bottom: width < 250 ? 20 : 32, left: width < 250 ? 30 : 50 };
   const chartW = width - pad.left - pad.right;
   const chartH = height - pad.top - pad.bottom;
 

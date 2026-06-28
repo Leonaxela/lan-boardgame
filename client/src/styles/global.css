@@ -369,7 +369,7 @@ body {
 
 .modal-content {
   background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 20px; padding: 32px; width: 420px;
   max-height: 80vh; overflow-y: auto;
   backdrop-filter: blur(28px) saturate(1.3);
@@ -380,7 +380,6 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   animation: slideUp 0.3s ease-out;
   position: relative;
-  overflow: hidden;
 }
 /* 弹窗顶部反光 */
 .modal-content::before {

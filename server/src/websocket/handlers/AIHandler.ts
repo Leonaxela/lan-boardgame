@@ -140,6 +140,10 @@ export function registerAIHandlers(ctx: DispatcherContext, handlers: Map<string,
 
     const difficulty = (msg.payload.difficulty as number) || 2;
     const engine = getEngine(room.gameType, room.config);
+
+    // 移除旧 AI 玩家（防止重复添加）
+    room.players = room.players.filter(p => !p.id.startsWith('ai-'));
+
     room.gameState = engine.createInitialState(room.config, []);
     room.moveHistory = [];
     room.activity = RoomActivity.Playing;
