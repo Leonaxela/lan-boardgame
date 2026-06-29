@@ -86,9 +86,9 @@ export const CC_COLS = 9;
 export const RED_PALACE = { rowMin: 7, rowMax: 9, colMin: 3, colMax: 5 };
 export const BLACK_PALACE = { rowMin: 0, rowMax: 2, colMin: 3, colMax: 5 };
 
-// 河界
-export const RED_RIVER_ROWS = [5, 6, 7, 8, 9];
-export const BLACK_RIVER_ROWS = [0, 1, 2, 3, 4];
+// 河界（过河后的行范围）
+export const RED_RIVER_ROWS = [0, 1, 2, 3, 4];
+export const BLACK_RIVER_ROWS = [5, 6, 7, 8, 9];
 
 // ══════════════════════════════════════════════
 //  配置

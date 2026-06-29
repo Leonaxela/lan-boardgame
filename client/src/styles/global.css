@@ -169,8 +169,6 @@ body {
   text-align: center; cursor: pointer;
   position: relative;
   border-radius: 20px;
-  /* 底层：极淡的磨砂底色 */
-  background: rgba(255, 255, 255, 0.04);
   /* 液态边框：极细半透白边 */
   border: 1px solid rgba(255, 255, 255, 0.1);
   /* 强磨砂透底 */
@@ -233,12 +231,26 @@ body {
 .game-card:hover::before { opacity: 1; }
 .game-card:hover::after { opacity: 0.7; filter: blur(0); }
 
-/* ── 各游戏主题色流光条 ── */
+/* ── 各游戏主题色流光条 + 卡片底色 ── */
 .game-card[data-game="go"]::after            { background: linear-gradient(90deg, transparent, #dcb35c, #f5d98a, #dcb35c, transparent); }
+.game-card[data-game="go"]                   { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(220,179,92,0.18), rgba(255,255,255,0.04) 70%); }
+.game-card[data-game="go"]:hover             { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(220,179,92,0.28), rgba(255,255,255,0.07) 70%); }
+
 .game-card[data-game="gomoku"]::after         { background: linear-gradient(90deg, transparent, #26c6da, #80deea, #26c6da, transparent); }
+.game-card[data-game="gomoku"]                { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(38,198,218,0.18), rgba(255,255,255,0.04) 70%); }
+.game-card[data-game="gomoku"]:hover          { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(38,198,218,0.28), rgba(255,255,255,0.07) 70%); }
+
 .game-card[data-game="chinese-chess"]::after   { background: linear-gradient(90deg, transparent, #ef5350, #ff8a80, #ef5350, transparent); }
+.game-card[data-game="chinese-chess"]          { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(239,83,80,0.18), rgba(255,255,255,0.04) 70%); }
+.game-card[data-game="chinese-chess"]:hover    { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(239,83,80,0.28), rgba(255,255,255,0.07) 70%); }
+
 .game-card[data-game="chess"]::after           { background: linear-gradient(90deg, transparent, #7c4dff, #b388ff, #7c4dff, transparent); }
+.game-card[data-game="chess"]                  { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(124,77,255,0.18), rgba(255,255,255,0.04) 70%); }
+.game-card[data-game="chess"]:hover            { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(124,77,255,0.28), rgba(255,255,255,0.07) 70%); }
+
 .game-card[data-game="draughts"]::after        { background: linear-gradient(90deg, transparent, #66bb6a, #a5d6a7, #66bb6a, transparent); }
+.game-card[data-game="draughts"]               { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(102,187,106,0.18), rgba(255,255,255,0.04) 70%); }
+.game-card[data-game="draughts"]:hover         { background: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(102,187,106,0.28), rgba(255,255,255,0.07) 70%); }
 
 /* ── hover 时各游戏主题光晕 ── */
 .game-card[data-game="go"].card-ready:hover {

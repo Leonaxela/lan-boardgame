@@ -17,6 +17,7 @@ export class GameWSServer {
   private wss: WSServer;
   private dispatcher: Dispatcher;
   private heartbeatTimer: NodeJS.Timeout | null = null;
+  private onlineTimer: NodeJS.Timeout | null = null;
   /** 待销毁的房间（房主断线30秒倒计时） */
   private pendingDestruction = new Map<string, NodeJS.Timeout>();
 
@@ -35,6 +36,10 @@ export class GameWSServer {
     this.wss.on('connection', (ws: WebSocket) => {
       console.log('[WS] 新连接');
 
+      // 记录连接开始时间，用于统计在线时长
+      (ws as any)._connectAt = Date.now();
+      (ws as any)._username = null;
+
       // 标记为存活
       (ws as any).isAlive = true;
 
@@ -42,12 +47,16 @@ export class GameWSServer {
         const text = raw.toString();
         try {
           const msg = JSON.parse(text);
+          // 从创建/加入房间消息中提取用户名，用于在线时长统计
+          if (msg.payload?.username) {
+            (ws as any)._username = msg.payload.username;
+          }
           if (msg.type?.startsWith('emoji_')) {
             handleEmojiMessage(ws, msg);
             return;
           }
         } catch (e) {
-          // 非 JSON 消息，跳过 emoji 处理
+          // 非 JSON 消息
         }
         try {
           this.dispatcher.dispatch(ws, text);
@@ -89,8 +98,26 @@ export class GameWSServer {
       });
     }, HEARTBEAT_INTERVAL);
 
+    // 在线时长跟踪：每 60 秒更新一次
+    this.onlineTimer = setInterval(() => {
+      const now = Date.now();
+      this.wss.clients.forEach((ws) => {
+        const w = ws as any;
+        if (!w._connectAt || !w._username) return;
+        const elapsed = Math.floor((now - w._connectAt) / 1000);
+        if (elapsed <= 0) return;
+        try {
+          execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE username = ?', [elapsed, w._username]);
+        } catch (e) {
+          // 静默失败
+        }
+        w._connectAt = now;
+      });
+    }, 60000);
+
     this.wss.on('close', () => {
       if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+      if (this.onlineTimer) clearInterval(this.onlineTimer);
     });
 
     // 处理 pong 响应
@@ -117,12 +144,22 @@ export class GameWSServer {
     const player = room?.getPlayerByWs(ws);
 
     // 清除用户会话 + 更新在线时长
-    if (player?.id) {
+    // 优先使用 WS 级别的统计（覆盖整个连接周期，含在大厅的时间）
+    const w = ws as any;
+    if (w._connectAt && w._username) {
+      const elapsed = Math.floor((Date.now() - w._connectAt) / 1000);
+      if (elapsed > 0 && elapsed < 86400) {
+        try {
+          execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE username = ?', [elapsed, w._username]);
+        } catch (e) {
+          console.error('[WS] 更新在线时长失败:', e);
+        }
+      }
+    } else if (player?.id) {
+      // 兜底：使用 room join 时间（用户未经过大厅直接进入房间）
       const joined = player.joinedAt;
       if (joined) {
         const elapsed = Math.floor((Date.now() - joined) / 1000);
-        // 注意：player.id 是房间内会话 UUID（crypto.randomUUID），不是 DB users.id，
-        // 不能用 WHERE id = ?。username 在 users 表上唯一，按 username 匹配。
         if (elapsed > 0 && elapsed < 86400 && player.username) {
           try {
             execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE username = ?', [elapsed, player.username]);
@@ -131,6 +168,9 @@ export class GameWSServer {
           }
         }
       }
+    }
+    // 清理 session
+    if (player?.id) {
       removeUserSession(player.id);
       // 同时清理 login 时写入的 session（user_id=users.id, username=player.username）
       try {
