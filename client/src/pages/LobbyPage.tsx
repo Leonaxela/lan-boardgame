@@ -14,6 +14,8 @@ export default function LobbyPage() {
   const { connected, send, onMessage } = useWebSocket();
   const [showDialog, setShowDialog] = useState(false);
   const [roomList, setRoomList] = useState<RoomInfo[]>([]);
+  const [mahjongRoomList, setMahjongRoomList] = useState<any[]>([]);
+  const [mahjongStats, setMahjongStats] = useState({ rooms: 0, players: 0 });
   const [selectedGame, setSelectedGame] = useState<GameInfo | null>(null);
   const [gameStats, setGameStats] = useState<Record<string, {rooms:number,players:number}>>({});
   const [emojiStats, setEmojiStats] = useState({ rooms: 0, players: 0 });
@@ -46,7 +48,23 @@ export default function LobbyPage() {
       const rooms = (p.rooms || []) as RoomInfo[];
       setEmojiStats({ rooms: rooms.length, players: rooms.reduce((s, r) => s + (r.playerCount || 0), 0) });
     });
-      return () => { u1(); u2(); u3(); u4(); };
+    const u5 = onMessage('mahjong_room_list', (p) => {
+      const rooms = (p.rooms || []);
+      setMahjongRoomList(rooms);
+      setMahjongStats({
+        rooms: rooms.length,
+        players: rooms.reduce((s: number, r: any) => s + (r.playerCount || 0), 0),
+      });
+    });
+    const u6 = onMessage('mahjong_room_created', (p) => {
+      localStorage.setItem('username', username);
+      nav('/mahjong');
+    });
+    const u7 = onMessage('mahjong_room_joined', (p) => {
+      localStorage.setItem('username', username);
+      nav('/mahjong');
+    });
+      return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
   }, [onMessage, nav, username]);
 
   // 连接成功后获取房间列表，之后每3秒刷新
@@ -54,7 +72,8 @@ export default function LobbyPage() {
     if (!connected) return;
     send('get_rooms', {});
     send('emoji_get_rooms', {});
-    const timer = setInterval(() => { send('get_rooms', {}); send('emoji_get_rooms', {}); }, 3000);
+    send('mahjong_get_rooms', {});
+    const timer = setInterval(() => { send('get_rooms', {}); send('emoji_get_rooms', {}); send('mahjong_get_rooms', {}); }, 3000);
     return () => clearInterval(timer);
   }, [connected, send]);
 
@@ -62,6 +81,12 @@ export default function LobbyPage() {
     const game = games.find(g => g.id === gameId);
     if (!game || game.status !== 'ready') {
       modalAlert('游戏开发中，请稍待！');
+      return;
+    }
+    if (game.id === 'mahjong') {
+      send('mahjong_get_rooms', {});
+      setSelectedGame(game);
+      setShowDialog(true);
       return;
     }
     setSelectedGame(game);
@@ -75,6 +100,10 @@ export default function LobbyPage() {
 
   const createRoom = () => {
     const id = selectedGame?.id || 'go';
+    if (id === 'mahjong') {
+      send('mahjong_create_room', { variant: 'sichuan', username: username || '玩家' });
+      return;
+    }
     if (id === 'emoji') {
       localStorage.setItem('emoji_username', username || '玩家');
       send('emoji_create_room', { username: username || '玩家' });
@@ -97,6 +126,10 @@ export default function LobbyPage() {
   };
 
   const joinRoom = (roomId: string) => {
+    if (selectedGame?.id === 'mahjong') {
+      send('mahjong_join_room', { roomId, username: username || '玩家' });
+      return;
+    }
     if (selectedGame?.id === 'emoji') {
       localStorage.setItem('emoji_username', username || '玩家');
       send('emoji_join_room', { roomId, username: username || '玩家' });
@@ -151,8 +184,10 @@ export default function LobbyPage() {
             <h2>{game.name}</h2>
             <p>{game.description}</p>
             {game.status === 'ready' && (
-              <p className={(game.id === 'emoji' ? emojiStats.rooms > 0 : gameStats[game.id]) ? 'game-stats' : 'game-stats-empty'}>
-                {game.id === 'emoji'
+              <p className={(game.id === 'mahjong' ? mahjongStats.rooms > 0 : game.id === 'emoji' ? emojiStats.rooms > 0 : gameStats[game.id]) ? 'game-stats' : 'game-stats-empty'}>
+                {game.id === 'mahjong'
+                  ? (mahjongStats.rooms > 0 ? `🟢 ${mahjongStats.rooms}个房间 · ${mahjongStats.players}人在线` : '💤💤💤')
+                  : game.id === 'emoji'
                   ? (emojiStats.rooms > 0 ? `🟢 ${emojiStats.rooms}个房间 · ${emojiStats.players}人在线` : '💤💤💤')
                   : (gameStats[game.id] ? `🟢 ${gameStats[game.id].rooms}个房间 · ${gameStats[game.id].players}人在线` : '💤💤💤')
                 }
@@ -167,24 +202,46 @@ export default function LobbyPage() {
         <div className="modal-overlay" onClick={() => setShowDialog(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h2>{selectedGame?.name || '围棋'} · 房间</h2>
-            <button className="btn-primary" onClick={createRoom}>创建房间</button>
-            <div className="room-divider" />
-            <div className="room-list">
-              {(() => {
-                const filtered = roomList.filter(r => r.gameType === selectedGame?.id);
-                return filtered.length === 0 ? (
-                  <p className="text-muted room-empty">暂无房间 💤</p>
-                ) : (
-                  filtered.map(r => (
-                    <div key={r.roomId} className="room-list-item" onClick={() => joinRoom(r.roomId)}>
-                      <span className="room-owner">👑 {r.owner}</span>
-                      <span className="room-count">{r.totalPeople}/{selectedGame?.id === 'emoji' ? 10 : 2} 人</span>
-                      <button className="btn-small">加入</button>
-                    </div>
-                  ))
-                );
-              })()}
-            </div>
+            {selectedGame?.id === 'mahjong' ? (
+              <>
+                <button className="btn-primary" onClick={createRoom}>创建房间</button>
+                <div className="room-divider" />
+                <div className="room-list">
+                  {mahjongRoomList.length === 0 ? (
+                    <p className="text-muted room-empty">暂无房间 💤</p>
+                  ) : (
+                    mahjongRoomList.map((r: any) => (
+                      <div key={r.roomId} className="room-list-item" onClick={() => joinRoom(r.roomId)}>
+                        <span className="room-owner">👑 {r.owner}</span>
+                        <span className="room-count">{r.playerCount}/4 人</span>
+                        <button className="btn-small">加入</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <button className="btn-primary" onClick={createRoom}>创建房间</button>
+                <div className="room-divider" />
+                <div className="room-list">
+                  {(() => {
+                    const filtered = roomList.filter(r => r.gameType === selectedGame?.id);
+                    return filtered.length === 0 ? (
+                      <p className="text-muted room-empty">暂无房间 💤</p>
+                    ) : (
+                      filtered.map(r => (
+                        <div key={r.roomId} className="room-list-item" onClick={() => joinRoom(r.roomId)}>
+                          <span className="room-owner">👑 {r.owner}</span>
+                          <span className="room-count">{r.totalPeople}/{selectedGame?.id === 'emoji' ? 10 : 2} 人</span>
+                          <button className="btn-small">加入</button>
+                        </div>
+                      ))
+                    );
+                  })()}
+                </div>
+              </>
+            )}
             <button className="btn-close" onClick={() => setShowDialog(false)}>关闭</button>
           </div>
         </div>

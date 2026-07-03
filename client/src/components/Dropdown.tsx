@@ -10,9 +10,10 @@ interface Props {
   value: string;
   onChange: (value: string) => void;
   direction?: 'down' | 'up';
+  noBorder?: boolean;
 }
 
-export default function Dropdown({ options, value, onChange, direction = 'down' }: Props) {
+export default function Dropdown({ options, value, onChange, direction = 'down', noBorder }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -54,18 +55,19 @@ export default function Dropdown({ options, value, onChange, direction = 'down' 
       <div
         onClick={() => setOpen(!open)}
         style={{
-          padding: '8px 32px 8px 14px', borderRadius: 8,
-          border: '1px solid rgba(255,255,255,0.08)',
-          background: 'rgba(255,255,255,0.03)',
-          color: '#e0e0e0', fontSize: 13, cursor: 'pointer',
-          userSelect: 'none', whiteSpace: 'nowrap', lineHeight: '16px', minWidth: 90,
+          padding: '4px 20px 4px 4px', borderRadius: 4,
+          border: noBorder ? 'none' : '1px solid rgba(255,255,255,0.08)',
+          background: noBorder ? 'transparent' : 'rgba(255,255,255,0.03)',
+          color: '#e0e0e0', fontSize: 12, cursor: 'pointer',
+          userSelect: 'none', whiteSpace: 'nowrap', lineHeight: '16px',
+          position: 'relative',
         }}
       >
         {selected?.label || value}
-        <svg viewBox="0 0 12 12" width="12" height="12"
+        <svg viewBox="0 0 12 12" width="10" height="10"
           style={{
-            position: 'absolute', right: 10, top: '50%',
-            transform: `translateY(-50%) rotate(${open ? (isUp ? 180 : 180) : 0}deg)`,
+            position: 'absolute', right: 4, top: '50%',
+            transform: `translateY(-50%) rotate(${open ? 180 : 0}deg)`,
             transition: 'transform 0.2s', pointerEvents: 'none',
           }}>
           <path d="M2 4l4 4 4-4" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

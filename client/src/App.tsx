@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import LobbyPage from './pages/LobbyPage';
 import RoomPage from './pages/RoomPage';
 import EmojiGamePage from './pages/emoji/EmojiGamePage';
+import MahjongPage from './pages/mahjong/MahjongPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { ModalContainer } from './components/Modal';
@@ -19,6 +20,7 @@ export default function App() {
       <Route path="/" element={<LobbyPage />} />
       <Route path="/room/:roomId" element={<RoomPage />} />
       <Route path="/emoji" element={<EmojiGamePage />} />
+      <Route path="/mahjong" element={<MahjongPage />} />
 
       {/* 管理后台 */}
       <Route path="/admin/login" element={<AdminLoginPage />} />

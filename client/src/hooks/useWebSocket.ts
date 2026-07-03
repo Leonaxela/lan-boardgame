@@ -6,7 +6,7 @@ import { wsClient } from '../net/WebSocketClient';
  * 自动在挂载时连接，卸载时断开。
  */
 export function useWebSocket() {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(wsClient.isConnected);
 
   useEffect(() => {
     wsClient.connect().then(() => setConnected(true)).catch(() => {});

@@ -10,6 +10,8 @@ import { ChatHandler } from '../chat/ChatHandler.js';
 import { upsertUserSession, removeUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed } from '../room/RoomPersistence.js';
 import { execute } from '../db/connection.js';
 import { handleEmojiMessage, handleEmojiDisconnect } from '../emoji/EmojiGameManager.js';
+import { handleMahjongMessage } from '../mahjong/MahjongMessageHandler.js';
+import { mahjongRoomManager } from '../mahjong/MahjongRoomManager.js';
 
 const HEARTBEAT_INTERVAL = 30000;
 
@@ -53,6 +55,10 @@ export class GameWSServer {
           }
           if (msg.type?.startsWith('emoji_')) {
             handleEmojiMessage(ws, msg);
+            return;
+          }
+          if (msg.type?.startsWith('mahjong_')) {
+            handleMahjongMessage(ws, text);
             return;
           }
         } catch (e) {
@@ -139,6 +145,25 @@ export class GameWSServer {
   }
 
   private handleDisconnect(ws: WebSocket): void {
+    // 麻将对局断开处理
+    const mjRoom = mahjongRoomManager.findRoomByWs(ws);
+    if (mjRoom) {
+      const player = mjRoom.players.find(p => p.ws === ws);
+      if (player?.seat === 0) {
+        // 房主断线 → 通知其他玩家 + 销毁房间
+        mjRoom.players.forEach(p => { if (p.ws && p.ws !== ws) {
+          try { p.ws.send(JSON.stringify({ type: 'room_destroyed', payload: { message: `👑 ${player.username} 断线，房间已销毁` } })); } catch {}
+        }});
+        mahjongRoomManager.removeRoom(mjRoom.roomId);
+      } else if (player && mjRoom.state && player.seat !== null) {
+        // 对局中其他人断线 → AI 接管
+        player.isAI = true; player.ws = null!;
+      } else {
+        mahjongRoomManager.leaveRoom(mjRoom.roomId, ws);
+      }
+      console.log('[Mahjong] 玩家断开: ' + (player?.username || '未知'));
+    }
+
     handleEmojiDisconnect(ws);
     const room = this.roomManager.findRoomByWs(ws);
     const player = room?.getPlayerByWs(ws);

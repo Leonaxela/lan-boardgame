@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" height="39.39px" width="30.18px" viewBox="0 0 30.18 39.39">
+  <defs>
+    <linearGradient id="backGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2c6fa8"/>
+      <stop offset="50%" stop-color="#1e5790"/>
+      <stop offset="100%" stop-color="#174a7a"/>
+    </linearGradient>
+    <linearGradient id="backFrame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a5c8a"/>
+      <stop offset="100%" stop-color="#0d3458"/>
+    </linearGradient>
+    <radialGradient id="backCenter" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#4a8fc8" stop-opacity="0.8"/>
+      <stop offset="60%" stop-color="#2a6fa0" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#174a7a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- 牌身 -->
+  <rect x="0.5" y="0.5" width="29.18" height="38.39" rx="2.5" ry="2.5" fill="url(#backGrad)" stroke="#0d3458" stroke-width="0.6"/>
+  <!-- 内框 -->
+  <rect x="3" y="3" width="24.18" height="33.39" rx="1.8" ry="1.8" fill="none" stroke="url(#backFrame)" stroke-width="0.8" stroke-opacity="0.6"/>
+  <!-- 中心光晕 -->
+  <circle cx="15.09" cy="19.695" r="11" fill="url(#backCenter)"/>
+  <!-- 中心圆环 -->
+  <circle cx="15.09" cy="19.695" r="6.5" fill="none" stroke="#7ab5e0" stroke-width="0.8" stroke-opacity="0.5"/>
+  <circle cx="15.09" cy="19.695" r="4.5" fill="none" stroke="#5a9fc8" stroke-width="0.5" stroke-opacity="0.4"/>
+  <!-- 中心菱形装饰 -->
+  <path d="M15.09 15.5 L17.2 19.695 L15.09 23.89 L12.98 19.695 Z" fill="none" stroke="#a8d0ec" stroke-width="0.6" stroke-opacity="0.6"/>
+  <circle cx="15.09" cy="19.695" r="1.5" fill="#c8e0f4" fill-opacity="0.7"/>
+  <!-- 四角小装饰点 -->
+  <circle cx="6" cy="6" r="0.9" fill="#5a9fc8" fill-opacity="0.5"/>
+  <circle cx="24.18" cy="6" r="0.9" fill="#5a9fc8" fill-opacity="0.5"/>
+  <circle cx="6" cy="33.39" r="0.9" fill="#5a9fc8" fill-opacity="0.5"/>
+  <circle cx="24.18" cy="33.39" r="0.9" fill="#5a9fc8" fill-opacity="0.5"/>
+  <!-- 四边中点装饰 -->
+  <circle cx="15.09" cy="5" r="0.7" fill="#7ab5e0" fill-opacity="0.4"/>
+  <circle cx="15.09" cy="34.39" r="0.7" fill="#7ab5e0" fill-opacity="0.4"/>
+  <circle cx="5" cy="19.695" r="0.7" fill="#7ab5e0" fill-opacity="0.4"/>
+  <circle cx="25.18" cy="19.695" r="0.7" fill="#7ab5e0" fill-opacity="0.4"/>
+  <!-- 顶部高光 -->
+  <rect x="2" y="1.5" width="26.18" height="1.2" rx="0.6" fill="#ffffff" fill-opacity="0.15"/>
+</svg>

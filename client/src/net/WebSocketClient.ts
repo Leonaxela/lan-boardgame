@@ -105,7 +105,9 @@ class WSClient {
 
   private dispatch(type: string, payload: any): void {
     // 缓存关键消息
-    const cacheTypes = ['room_created', 'room_joined', 'game_started', 'game_state', 'room_updated'];
+    const cacheTypes = ['room_created', 'room_joined', 'game_started', 'game_state', 'room_updated',
+      'mahjong_room_created', 'mahjong_room_joined', 'mahjong_game_started', 'mahjong_game_state',
+      'mahjong_seat_changed', 'room_destroyed'];
     if (cacheTypes.includes(type)) {
       this.lastMessage.set(type, payload);
     }
