@@ -235,6 +235,7 @@ function executeAction(roomId: string, seat: number, action: AvailableAction) {
   room.state = checkStalemate(room.state);
 
   broadcastGameState(roomId);
+  broadcastAll(roomId, 'mahjong_action_performed', { action: action.type, seat });
 
   if (room.state.phase === 'finished' || room.state.result) {
     broadcastAll(roomId, 'mahjong_game_over', { result: room.state.result, state: renderForPlayer(room.state, 0) });
@@ -412,9 +413,12 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
 
     case 'mahjong_start_solo': {
       const r5 = mahjongRoomManager.findRoomByWs(ws);
-      if (!r5 || r5.state) { send(ws, 'error', { message: '游戏已开始' }); return; }
+      if (!r5 || (r5.state && r5.state.phase === 'playing')) { send(ws, 'error', { message: '游戏已开始' }); return; }
+      if (r5.destroyTimeout) { clearTimeout(r5.destroyTimeout); r5.destroyTimeout = null; }
+      r5.rematchVotes.clear();
       if (payload.variant) r5.variant = payload.variant;
       fillAIRoom(r5.roomId);
+      r5.state = null;
       const soloState = createInitialState(r5.variant);
       r5.state = soloState;
       broadcastAll(r5.roomId, 'mahjong_game_started', {
@@ -440,7 +444,10 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
 
     case 'mahjong_start_game': {
       const r6 = mahjongRoomManager.findRoomByWs(ws);
-      if (!r6) { send(ws, 'error', { message: '不在房间中' }); return; }
+      if (!r6 || (r6.state && r6.state.phase === 'playing')) { send(ws, 'error', { message: '游戏已开始' }); return; }
+      if (r6.destroyTimeout) { clearTimeout(r6.destroyTimeout); r6.destroyTimeout = null; }
+      r6.rematchVotes.clear();
+      r6.state = null;
       const state = createInitialState(r6.variant);
       r6.state = state;
       broadcastAll(r6.roomId, 'mahjong_game_started', {
@@ -470,12 +477,51 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
       if (rEnd.turnTimeout) clearTimeout(rEnd.turnTimeout);
       if (rEnd.destroyTimeout) { clearTimeout(rEnd.destroyTimeout); rEnd.destroyTimeout = null; }
       clearPending(rEnd.roomId);
-      rEnd.players = rEnd.players.filter(p => !p.isAI);
+      rEnd.rematchVotes.clear();
+      // 移除 AI 玩家；非房主的人类玩家移到观战区
+      const owner = rEnd.players.find(p => p.seat === 0);
+      const others = rEnd.players.filter(p => p.seat !== 0 && !p.isAI);
+      for (const o of others) { o.seat = null; rEnd.spectators.push(o); }
+      rEnd.players = owner ? [owner] : [];
       broadcastAll(rEnd.roomId, 'mahjong_game_ended', {});
       broadcastAll(rEnd.roomId, 'mahjong_seat_changed', {
         players: rEnd.players.map(p => ({ username: p.username, seat: p.seat, isAI: p.isAI })),
         spectators: rEnd.spectators.map(p => ({ username: p.username })),
       });
+      break;
+    }
+
+    case 'mahjong_rematch_vote': {
+      const rVote = mahjongRoomManager.findRoomByWs(ws);
+      if (!rVote || !rVote.state) break;
+      const pVote = rVote.players.find(p => p.ws === ws);
+      if (!pVote || pVote.seat === null) break;
+
+      rVote.rematchVotes.add(pVote.seat);
+      // AI 自动投票
+      for (const aiP of rVote.players) {
+        if (aiP.isAI && aiP.seat !== null) rVote.rematchVotes.add(aiP.seat);
+      }
+
+      const totalSeats = rVote.players.filter(p => p.seat !== null).length;
+      const voted = rVote.rematchVotes.size;
+      broadcastAll(rVote.roomId, 'mahjong_rematch_count', { count: voted, total: totalSeats });
+
+      const hasAI = rVote.players.some(p => p.isAI);
+      if (voted >= totalSeats || (hasAI && voted >= rVote.players.filter(p => !p.isAI).length + 1)) {
+        // 所有人已投票 → 重开
+        rVote.rematchVotes.clear();
+        if (rVote.destroyTimeout) { clearTimeout(rVote.destroyTimeout); rVote.destroyTimeout = null; }
+        if (hasAI) fillAIRoom(rVote.roomId);
+        const newState = createInitialState(rVote.variant);
+        rVote.state = newState;
+        broadcastAll(rVote.roomId, 'mahjong_game_started', {
+          players: rVote.players.map(p => ({ username: p.username, seat: p.seat, isAI: p.isAI })),
+          state: renderForPlayer(newState, 0),
+        });
+        broadcastGameState(rVote.roomId);
+        scheduleAIMove(rVote.roomId);
+      }
       break;
     }
 

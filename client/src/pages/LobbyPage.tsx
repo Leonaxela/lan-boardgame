@@ -53,7 +53,7 @@ export default function LobbyPage() {
       setMahjongRoomList(rooms);
       setMahjongStats({
         rooms: rooms.length,
-        players: rooms.reduce((s: number, r: any) => s + (r.playerCount || 0), 0),
+        players: rooms.reduce((s: number, r: any) => s + (r.totalPeople || 0), 0),
       });
     });
     const u6 = onMessage('mahjong_room_created', (p) => {
@@ -213,7 +213,7 @@ export default function LobbyPage() {
                     mahjongRoomList.map((r: any) => (
                       <div key={r.roomId} className="room-list-item" onClick={() => joinRoom(r.roomId)}>
                         <span className="room-owner">👑 {r.owner}</span>
-                        <span className="room-count">{r.playerCount}/4 人</span>
+                        <span className="room-count">{r.totalPeople}/4 人</span>
                         <button className="btn-small">加入</button>
                       </div>
                     ))

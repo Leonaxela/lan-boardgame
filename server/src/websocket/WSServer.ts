@@ -158,6 +158,19 @@ export class GameWSServer {
       } else if (player && mjRoom.state && player.seat !== null) {
         // 对局中其他人断线 → AI 接管
         player.isAI = true; player.ws = null!;
+        // 广播系统消息 + 刷新玩家列表
+        const msgTxt = `${player.username} 断线，AI 已接管`;
+        const allClients = [...mjRoom.players, ...mjRoom.spectators];
+        for (const c of allClients) {
+          if (!c.ws) continue;
+          try {
+            c.ws.send(JSON.stringify({ type: 'mahjong_chat', payload: { username: '系统', text: msgTxt, isSystem: true, timestamp: Date.now() } }));
+            c.ws.send(JSON.stringify({ type: 'mahjong_seat_changed', payload: {
+              players: mjRoom.players.map(p => ({ username: p.username, seat: p.seat, isAI: p.isAI })),
+              spectators: mjRoom.spectators.map(p => ({ username: p.username })),
+            }}));
+          } catch {}
+        }
       } else {
         mahjongRoomManager.leaveRoom(mjRoom.roomId, ws);
       }

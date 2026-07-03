@@ -77,3 +77,24 @@ export function playVictorySound() {
     // 静默失败（浏览器可能不允许自动播放）
   }
 }
+
+/**
+ * 中文语音播报 —— 使用 Web Speech API
+ */
+function speak(zhText: string) {
+  try {
+    const u = new SpeechSynthesisUtterance(zhText);
+    u.lang = 'zh-CN';
+    u.rate = 1.0;
+    u.volume = 0.8;
+    speechSynthesis.speak(u);
+  } catch {
+    // 浏览器不支持语音合成时静默
+  }
+}
+
+export function speakDiscard() { speak('出牌'); }
+export function speakChi() { speak('吃'); }
+export function speakPeng() { speak('碰'); }
+export function speakGang() { speak('杠'); }
+export function speakHu() { speak('胡牌'); playVictorySound(); }

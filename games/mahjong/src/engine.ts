@@ -481,7 +481,12 @@ export function advanceTurn(state: MahjongState): { state: MahjongState; error?:
 /** 检查是否流局 */
 export function checkStalemate(state: MahjongState): MahjongState {
   if (state.winners.length === 0 && (state.wallEnd || state.wall.length === 0)) {
-    return { ...state, phase: 'finished', wallEnd: true };
+    return {
+      ...state,
+      phase: 'finished',
+      wallEnd: true,
+      result: { winner: -1, fan: 0, reason: '流局', hand: [], melds: [], winTile: { suit: 'wan', value: 1 } },
+    };
   }
   // 血战到底：只剩一人未胡
   const rules = getRules(state.variant);

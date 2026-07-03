@@ -24,6 +24,8 @@ export interface MahjongRoom {
   actionTimeout: NodeJS.Timeout | null;
   /** 终局后自动销毁房间的计时器 */
   destroyTimeout: NodeJS.Timeout | null;
+  /** 流局/终局后同意再战的座位 */
+  rematchVotes: Set<number>;
 }
 
 export class MahjongRoomManager {
@@ -55,6 +57,7 @@ export class MahjongRoomManager {
       passedSeats: new Set(),
       actionTimeout: null,
       destroyTimeout: null,
+      rematchVotes: new Set(),
     };
     this.rooms.set(roomId, room);
     return room;
@@ -75,7 +78,7 @@ export class MahjongRoomManager {
   sit(roomId: string, ws: WebSocket, seat: number): number | null {
     const room = this.rooms.get(roomId);
     if (!room) return null;
-    if (room.state) return null; // 游戏已开始
+    if (room.state && room.state.phase === 'playing') return null; // 游戏中不能入座
     if (room.players.some(p => p.seat === seat)) return null; // 座位已被占
 
     // 已坐玩家换座
@@ -100,7 +103,7 @@ export class MahjongRoomManager {
   stand(roomId: string, ws: WebSocket): boolean {
     const room = this.rooms.get(roomId);
     if (!room) return false;
-    if (room.state) return false; // 游戏已开始
+    if (room.state && room.state.phase === 'playing') return false; // 游戏中不能离座
 
     const idx = room.players.findIndex(p => p.ws === ws);
     if (idx < 0 || room.players[idx].seat === 0) return false; // 房主不能离座
