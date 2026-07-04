@@ -102,8 +102,7 @@ router.get('/:username/profile', (req: Request, res: Response) => {
 
 /**
  * GET /api/users/:username/records?page=1&limit=10
- * 公开：该用户参与的对局列表（分页），每条标注该用户胜负。
- * 返回轻量字段（不含 moves/sgf/pgn/pdn）。
+ * 公开：该用户参与的对局列表（分页），每条标注该用户胜负，含棋谱字段。
  */
 router.get('/:username/records', (req: Request, res: Response) => {
   const { username } = req.params;
@@ -128,7 +127,7 @@ router.get('/:username/records', (req: Request, res: Response) => {
   const total = totalRow?.c ?? 0;
 
   const records = queryAll<any>(
-    `SELECT gr.id, gr.game_type, gr.board_size, gr.players, gr.winner_id, gr.reason, gr.scores, gr.difficulty, gr.created_at, gr.duration_sec
+    `SELECT gr.id, gr.game_type, gr.board_size, gr.players, gr.winner_id, gr.reason, gr.moves, gr.sgf, gr.pgn, gr.pdn, gr.scores, gr.difficulty, gr.created_at, gr.duration_sec
      FROM game_records gr
      WHERE EXISTS (
        SELECT 1 FROM json_each(gr.players) je
@@ -151,6 +150,7 @@ router.get('/:username/records', (req: Request, res: Response) => {
       id: r.id,
       gameType: r.game_type,
       boardSize: r.board_size,
+      winnerId: r.winner_id,
       opponent: opponent ? opponent.name : '—',
       myColor: me?.color || '',
       result: isWinner ? 'win' : (isDraw ? 'draw' : 'loss'),
@@ -158,6 +158,10 @@ router.get('/:username/records', (req: Request, res: Response) => {
       difficulty: r.difficulty,
       createdAt: r.created_at,
       durationSec: r.duration_sec,
+      moves: r.moves,
+      sgf: r.sgf,
+      pgn: r.pgn,
+      pdn: r.pdn,
     };
   });
 

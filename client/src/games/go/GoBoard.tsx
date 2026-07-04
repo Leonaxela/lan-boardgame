@@ -327,7 +327,7 @@ export default function GoBoard({
         ctx.fill();
       }
     }
-  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol, analysisData]);
+  }, [board, boardSize, lastMove, myColor, isMyTurn, cellSize, offsetX, offsetY, boardPixelW, boardPixelH, width, height, transformRow, transformCol, analysisData, moveNumbers]);
 
   // 首次渲染 + 每帧动画
   useEffect(() => {

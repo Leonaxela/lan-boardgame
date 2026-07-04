@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import GameReplayViewer from './GameReplayViewer';
 
 interface UserProfileModalProps {
   username: string;
@@ -30,6 +31,7 @@ interface RecordItem {
   id: string;
   gameType: string;
   boardSize: number;
+  winnerId: string;
   opponent: string;
   myColor: string;
   result: 'win' | 'loss' | 'draw';
@@ -37,6 +39,10 @@ interface RecordItem {
   difficulty: number | string;
   createdAt: string;
   durationSec: number;
+  moves: string;
+  sgf?: string;
+  pgn?: string;
+  pdn?: string;
 }
 
 interface RecordsData {
@@ -118,6 +124,7 @@ function compressImage(file: File, w: number, h: number, quality: number): Promi
 export default function UserProfileModal({ username, isMe = false, onClose }: UserProfileModalProps) {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [records, setRecords] = useState<RecordsData | null>(null);
+  const [replaying, setReplaying] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingRecords, setLoadingRecords] = useState(true);
@@ -311,6 +318,7 @@ export default function UserProfileModal({ username, isMe = false, onClose }: Us
                     <th>结果</th>
                     <th>时长</th>
                     <th>时间</th>
+                    <th style={{ width: 40 }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -330,6 +338,7 @@ export default function UserProfileModal({ username, isMe = false, onClose }: Us
                         <td><span className={`ur-result ${resultClass}`}>{resultText}</span></td>
                         <td>{formatDuration(r.durationSec)}</td>
                         <td className="ur-time">{formatDate(r.createdAt)}</td>
+                        <td>{r.moves && ['go','gomoku','chinese-chess','chess','draughts'].includes(r.gameType) ? <button className="btn-small" onClick={() => setReplaying(r)} style={{cursor:'pointer',background:'none',border:'none',fontSize:16}}>📋</button> : null}</td>
                       </tr>
                     );
                   })}
@@ -358,6 +367,7 @@ export default function UserProfileModal({ username, isMe = false, onClose }: Us
           )}
         </div>
       </div>
+      {replaying && <GameReplayViewer record={replaying} onClose={() => setReplaying(null)} />}
     </div>
   );
 }
