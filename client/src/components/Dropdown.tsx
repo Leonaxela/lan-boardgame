@@ -29,7 +29,7 @@ export default function Dropdown({ options, value, onChange, direction = 'down',
   const isUp = direction === 'up';
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block', zIndex: open ? 10 : undefined }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block', whiteSpace: 'nowrap', zIndex: open ? 10 : undefined }}>
       {open && isUp && (
         <div style={{
           position: 'absolute', bottom: '100%', left: 0, marginBottom: 4,

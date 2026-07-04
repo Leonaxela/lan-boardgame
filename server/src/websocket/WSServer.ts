@@ -61,8 +61,8 @@ export class GameWSServer {
             handleMahjongMessage(ws, text);
             return;
           }
-        } catch (e) {
-          // 非 JSON 消息
+        } catch (e: any) {
+          if (!(e instanceof SyntaxError)) console.error('[WS] 消息处理异常:', e?.message || e);
         }
         try {
           this.dispatcher.dispatch(ws, text);

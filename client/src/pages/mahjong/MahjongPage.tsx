@@ -3,7 +3,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import TileView from './components/TileView';
 import Dropdown from '../../components/Dropdown';
 import { formatChatTime } from '../../utils/chat';
-import { speakDiscard, speakChi, speakPeng, speakGang, speakHu } from '../../utils/sound';
+import { speakDiscardTile, speakChi, speakPeng, speakGang, speakHu } from '../../utils/sound';
 import '../../styles/mahjong-room.css';
 
 type Phase = 'playing'|'result';
@@ -39,11 +39,11 @@ export default function MahjongPage() {
 
   useEffect(()=>{if(!ws.connected)return;const u:(()=>void)[]=[];
     u.push(ws.onMessage('mahjong_room_created',(p:any)=>{setRoomId(p.roomId);setPlayers(p.players||[]);setSpectators(p.spectators||[]);setIsOwner(true);setVariant(p.variant||'sichuan');setMySeat(0);}));
-    u.push(ws.onMessage('mahjong_room_joined',(p:any)=>{setRoomId(p.roomId);setPlayers(p.players||[]);setSpectators(p.spectators||[]);setIsOwner(false);setVariant(p.variant||'sichuan');setMySeat(null);}));
+    u.push(ws.onMessage('mahjong_room_joined',(p:any)=>{setRoomId(p.roomId);setPlayers(p.players||[]);setSpectators(p.spectators||[]);setIsOwner(false);setVariant(p.variant||'sichuan');setMySeat(null);if(p.state){setGs(p.state);setPhase(p.state.phase==='finished'?'result':'playing');}}));
     u.push(ws.onMessage('mahjong_seat_changed',(p:any)=>{setPlayers(p.players||[]);setSpectators(p.spectators||[]);const me=(p.players||[]).find((pl:any)=>pl.username===localStorage.getItem('username'));setMySeat(me?me.seat:null);}));
     u.push(ws.onMessage('mahjong_game_started',(p:any)=>{setGs(p.state);setPlayers(p.players||[]);setPhase('playing');}));
     u.push(ws.onMessage('mahjong_game_state',(p:ClientState)=>{setGs(p);setMySeat(p.seat??mySeat);setActs(null);setSel(-1);setDiscarding(false);}));
-    u.push(ws.onMessage('mahjong_discarded',(p:any)=>{speakDiscard();setLastTile(p.tile||null);setDiscarding(false);if(p.state)setGs(p.state);}));
+    u.push(ws.onMessage('mahjong_discarded',(p:any)=>{if(p.tile)speakDiscardTile(p.tile.suit,p.tile.value);setLastTile(p.tile||null);setDiscarding(false);if(p.state)setGs(p.state);}));
     u.push(ws.onMessage('mahjong_actions',(p:any)=>{setGs(p.state);setActs(p.actions||null);}));
     u.push(ws.onMessage('mahjong_game_over',(p:any)=>{setGs(p.state);setPhase('result');setActs(null);}));
     u.push(ws.onMessage('mahjong_rematch_count',(p:any)=>{setRematchCount(p.count||0);}));
@@ -52,6 +52,7 @@ export default function MahjongPage() {
     u.push(ws.onMessage('mahjong_chat',(p:any)=>{setChatLog(prev=>[...prev,p]);}));
     u.push(ws.onMessage('mahjong_spectator_joined',(p:any)=>{setSpectators(p.spectators||[]);}));
     u.push(ws.onMessage('mahjong_action_performed',(p:any)=>{switch(p.action){case'chi':speakChi();break;case'peng':speakPeng();break;case'gang':case'angang':case'jiagang':speakGang();break;case'hu':speakHu();break;}}));
+    u.push(ws.onMessage('error',(p:any)=>{console.error('[Mahjong Error]',p.message||JSON.stringify(p));}));
     u.push(ws.onMessage('room_destroyed',()=>{window.location.href='/';}));
     return ()=>u.forEach(fn=>fn());
   },[ws.connected]);
@@ -77,7 +78,7 @@ export default function MahjongPage() {
 
   const OppH=({seat}:{seat:number})=>{const c=s?.handSizes?.[seat]||0;if(!c)return null;return <div style={{display:'flex'}}>{Array.from({length:Math.min(c,14)}).map((_,i)=><TileView key={i} suit="wan" value={1} hidden small gap/>)}</div>;};
   const OppV=({seat,mirror}:{seat:number;mirror?:boolean})=>{const c=s?.handSizes?.[seat]||0;if(!c)return null;return <div className="mj-side-tiles">{Array.from({length:Math.min(c,14)}).map((_,i)=><TileView key={i} suit="wan" value={1} hidden small rotation={mirror?-90:90}/>)}</div>;};
-  const Melds=({seat,side,rot,lastClaim}:{seat:number;side?:boolean;rot?:number;lastClaim?:TileData|null})=>{const m=s?.melds?.[seat];if(!m?.length)return null;return <div className={side?'mj-side-melds':''} style={!side?{display:'flex'}:{}}>{m.map((g:MeldData,i:number)=><div key={i} className="mj-meld-group" style={{display:'flex',flexDirection:side?'column':'row'}}>{g.type==='concealed_gang'?<><TileView suit={g.tiles[0].suit} value={g.tiles[0].value} small rotation={rot}/><TileView suit="wan" value={1} hidden small rotation={rot}/><TileView suit="wan" value={1} hidden small rotation={rot}/><TileView suit={g.tiles[3].suit} value={g.tiles[3].value} small rotation={rot}/></>:g.tiles.map((t,j)=><TileView key={j} suit={t.suit} value={t.value} small rotation={rot} className={lastClaim&&t.suit===lastClaim.suit&&t.value===lastClaim.value?'mj-meld-last':undefined}/>)}</div>)}</div>;};
+  const Melds=({seat,side,rot,lastClaim}:{seat:number;side?:boolean;rot?:number;lastClaim?:TileData|null})=>{const m=s?.melds?.[seat];if(!m?.length)return null;return <div className={side?'mj-side-melds':''} style={!side?{display:'flex'}:{}}>{m.map((g:MeldData,i:number)=><div key={i} className="mj-meld-group" style={{display:'flex',flexDirection:side?'column':'row'}}>{g.type==='concealed_gang'?<><TileView suit={g.tiles[0].suit} value={g.tiles[0].value} small rotation={rot}/><TileView suit="wan" value={1} hidden small rotation={rot}/><TileView suit="wan" value={1} hidden small rotation={rot}/><TileView suit={g.tiles[3].suit} value={g.tiles[3].value} small rotation={rot}/></>:g.tiles.map((t,j)=>lastClaim&&t.suit===lastClaim.suit&&t.value===lastClaim.value?<div key={j} className="mj-discard-last"><div className="mj-discard-arrow">▼</div><TileView suit={t.suit} value={t.value} small rotation={rot}/></div>:<TileView key={j} suit={t.suit} value={t.value} small rotation={rot}/>)}</div>)}</div>;};
   const Discards=({seat,lastTile}:{seat:number;lastTile?:TileData|null})=>{const d=s?.discards?.[seat]||[];if(!d.length)return <div style={{minWidth:40,minHeight:30}}/>;const last=s?.lastDiscardPlayer===seat&&s?.lastDiscard;return <div style={{display:'flex',flexWrap:'wrap',gap:1,maxWidth:180,justifyContent:'center'}}>{d.slice(-18).map((t,i)=>{const isLast=last?i===d.slice(-18).length-1&&t.suit===s!.lastDiscard!.suit&&t.value===s!.lastDiscard!.value:lastTile?i===d.slice(-18).length-1&&t.suit===lastTile.suit&&t.value===lastTile.value:false;return isLast?<div key={i} className="mj-discard-last"><div className="mj-discard-arrow">▼</div><TileView suit={t.suit} value={t.value} small/></div>:<TileView key={i} suit={t.suit} value={t.value} small/>;})}</div>;}
   const MyHand=()=>{if(!s?.myHand)return null;return s.myHand.map((t,i)=><TileView key={i} suit={t.suit} value={t.value} selected={i===sel} onClick={()=>{if(isMyTurn)setSel(prev=>prev===i?-1:i);}}/>);};
 
@@ -104,11 +105,11 @@ export default function MahjongPage() {
   };
 
   return (<>
-    {showHelp&&<div className="modal-overlay" onClick={()=>setShowHelp(false)}><div className="modal-content mj-help-modal" onClick={e=>e.stopPropagation()}><h2>规则说明</h2><button className="btn-close" onClick={()=>setShowHelp(false)} style={{marginTop:16}}>关闭</button></div></div>}
+    {showHelp&&<div className="modal-overlay" onClick={()=>setShowHelp(false)}><div className="modal-content mj-help-modal" onClick={e=>e.stopPropagation()}><h2>{variant==='sichuan'?'四川麻将':variant==='wuhan'?'武汉麻将':'国标麻将'} · 规则说明</h2><div className="mj-help-rules">{variant==='sichuan'?<><p>◈ 使用108张牌（万/条/筒，无风牌箭牌）</p><p>◈ 血战到底：有人胡牌后游戏继续，直到三人胡牌或牌墙摸完</p><p>◈ 可吃、碰、杠、胡</p><p>◈ 0番起胡</p></>:variant==='wuhan'?<><p>◈ 使用136张牌（万/条/筒 + 东南西北 + 中发白）</p><p>◈ 标准13张手牌，4面子+1雀头胡牌</p><p>◈ 可吃、碰、杠、胡</p><p>◈ 0番起胡</p><p>◈ 非血战到底，一局一胡</p></>:<><p>◈ 使用136张牌（万/条/筒 + 东南西北 + 中发白）</p><p>◈ 标准13张手牌</p><p>◈ 可吃、碰、杠、胡</p><p>◈ <strong>8番起胡</strong>（不够8番不能胡牌）</p><p>◈ 非血战到底，一局一胡</p></>}</div><button className="btn-close" onClick={()=>setShowHelp(false)} style={{marginTop:16}}>关闭</button></div></div>}
     <div className="room-page" style={{background:'#2c6e49'}}>
     <aside className="room-sidebar">
       <div className="room-header"><button className="btn-room-id">{'🀄 麻将 · '+(roomId?.slice(0,6)||'')}</button><button className="btn-exit-room" onClick={exit}>退出</button></div>
-      <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:8,display:'flex',alignItems:'center',gap:4}}><span>规则:</span>{!s&&isOwner?<Dropdown options={[{value:'sichuan',label:'四川'},{value:'wuhan',label:'武汉'},{value:'guobiao',label:'国标'}]} value={variant} onChange={chVar} noBorder/>:<span style={{color:'#e0e0e0',fontSize:13}}>{variant==='sichuan'?'四川':variant==='wuhan'?'武汉':'国标'}</span>}</div>
+      <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:8,display:'flex',alignItems:'center',gap:4}}><span>规则:</span>{!s&&isOwner?<Dropdown options={[{value:'sichuan',label:'四川麻将'},{value:'wuhan',label:'武汉麻将'},{value:'guobiao',label:'国标麻将'}]} value={variant} onChange={chVar} noBorder/>:<span style={{color:'#e0e0e0',fontSize:13}}>{variant==='sichuan'?'四川麻将':variant==='wuhan'?'武汉麻将':'国标麻将'}</span>}</div>
       <div className="player-list"><h3>玩家 ({humanCount}/4)</h3>
         {[0,1,2,3].map(seat=>{const p=players.find(x=>x.seat===seat);const im=p&&p.username===uname;const isOwnerPlayer=p&&p.username===players[0]?.username;const canStand=im&&!isOwner;const click=()=>{if(canStand)stand();else if(!im&&!s)sit(seat);};
         if(!p)return<div key={seat} className="player-item empty" onClick={click} style={{cursor:'pointer'}}><span className="mj-seat-badge" style={{background:SEAT_COLORS[seat],marginRight:8}}>{SEAT_NAMES[seat]}</span><span style={{color:'rgba(255,255,255,0.25)'}}>{SEAT_NAMES[seat]} 空位</span></div>;

@@ -81,6 +81,18 @@ export function playVictorySound() {
 /**
  * 中文语音播报 —— 使用 Web Speech API
  */
+const NUM_CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const SUIT_CN: Record<string, string> = { wan: '万', tiao: '条', tong: '饼', feng: '风', jian: '箭' };
+const FENG_CN = ['', '东', '南', '西', '北'];
+const JIAN_CN = ['', '中', '发', '白'];
+
+/** 将牌转换为中文名称 */
+function tileNameCN(suit: string, value: number): string {
+  if (suit === 'feng') return FENG_CN[value] + '风';
+  if (suit === 'jian') return JIAN_CN[value];
+  return NUM_CN[value] + (SUIT_CN[suit] || '');
+}
+
 function speak(zhText: string) {
   try {
     const u = new SpeechSynthesisUtterance(zhText);
@@ -93,7 +105,7 @@ function speak(zhText: string) {
   }
 }
 
-export function speakDiscard() { speak('出牌'); }
+export function speakDiscardTile(suit: string, value: number) { speak(tileNameCN(suit, value)); }
 export function speakChi() { speak('吃'); }
 export function speakPeng() { speak('碰'); }
 export function speakGang() { speak('杠'); }

@@ -194,10 +194,9 @@ export function checkActions(state: MahjongState): AvailableAction[] | null {
     }
 
     // 吃检测（仅上家出的牌可以吃）
-    // 上家 = (from + 3) % 4，即 from 的上家
-    // 但实际上，seat 能吃 from 的牌当且仅当 (seat + 1) % 4 === from
-    // 即 from 是 seat 的下家 → seat 是 from 的上家
-    if ((seat + 1) % 4 === from && tile.suit !== 'feng' && tile.suit !== 'jian') {
+    // 吃检测：只能吃上家（前一家）出的牌
+    // 在回合顺序 0→1→2→3→0 中，seat 的上家 = (seat + 3) % 4
+    if ((seat + 3) % 4 === from && tile.suit !== 'feng' && tile.suit !== 'jian') {
       const combos = getChiCombos(hand, tile);
       if (combos.length > 0) {
         actions.push({ type: 'chi', tiles: [tile], seat, chiCombos: combos });
@@ -293,6 +292,9 @@ export function applyAction(
   const hand = newState.hands[seat];
   const tile = action.tiles[0];
   const rules = getRules(newState.variant);
+  // 记住被吃碰杠的牌（从弃牌堆移除用）
+  const claimSeat = state.lastDiscardPlayer;
+  const claimTile = claimSeat >= 0 ? state.lastDiscard : null;
 
   newState.lastDiscard = null;
   newState.lastDiscardPlayer = -1;
@@ -308,6 +310,11 @@ export function applyAction(
     newState.currentPlayer = seat;
     newState.drawnTile = null;
     newState.handSizes = newState.hands.map(h => h.length);
+    if (claimSeat >= 0 && claimTile) {
+      const d = newState.discards[claimSeat];
+      const di = d.findIndex(t => sameTile(t, claimTile));
+      if (di >= 0) d.splice(di, 1);
+    }
     return { state: newState, needsDiscard: true };
 
   } else if (action.type === 'chi') {
@@ -323,6 +330,11 @@ export function applyAction(
     newState.currentPlayer = seat;
     newState.drawnTile = null;
     newState.handSizes = newState.hands.map(h => h.length);
+    if (claimSeat >= 0 && claimTile) {
+      const d = newState.discards[claimSeat];
+      const di = d.findIndex(t => sameTile(t, claimTile));
+      if (di >= 0) d.splice(di, 1);
+    }
     return { state: newState, needsDiscard: true };
 
   } else if (action.type === 'gang') {
@@ -347,6 +359,11 @@ export function applyAction(
       newState.drawnTile = null;
     }
     newState.handSizes = newState.hands.map(h => h.length);
+    if (claimSeat >= 0 && claimTile) {
+      const d = newState.discards[claimSeat];
+      const di = d.findIndex(t => sameTile(t, claimTile));
+      if (di >= 0) d.splice(di, 1);
+    }
     return { state: newState, needsDiscard: true };
 
   } else if (action.type === 'angang') {
@@ -402,6 +419,11 @@ export function applyAction(
     if (!isSelf) {
       // 点炮胡：把 lastDiscard 加入手牌
       newState.hands[seat].push(tile);
+      if (claimSeat >= 0 && claimTile) {
+        const d = newState.discards[claimSeat];
+        const di = d.findIndex(t => sameTile(t, claimTile));
+        if (di >= 0) d.splice(di, 1);
+      }
     }
 
     const fan = rules.calculateFan(newState.hands[seat], newState.melds[seat], winTile, isSelf, newState.wind, seat);

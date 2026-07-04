@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import {
   createInitialState, drawTile, discardTile, checkActions, checkSelfDrawActions,
-  applyAction, advanceTurn, checkStalemate, renderForPlayer, selectAIMove,
+  applyAction, advanceTurn, checkStalemate, renderForPlayer, selectAIMove, sortHand,
 } from '@lan-boardgame/mahjong';
 import type { AvailableAction, MahjongState } from '@lan-boardgame/mahjong';
 import { mahjongRoomManager } from './MahjongRoomManager.js';
@@ -270,7 +270,7 @@ function scheduleAIMove(roomId: string) {
   const current = room.players.find(p => p.seat === room.state!.currentPlayer);
   if (!current || !current.isAI) return;
   if (room.turnTimeout) clearTimeout(room.turnTimeout);
-  room.turnTimeout = setTimeout(() => doAIMove(roomId), 800);
+  room.turnTimeout = setTimeout(() => doAIMove(roomId), 3000 + Math.random() * 2000);
 }
 
 function doAIMove(roomId: string) {
@@ -335,6 +335,7 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
         roomId, variant: room.variant,
         players: room.players.map(p => ({ username: p.username, seat: p.seat, isAI: p.isAI })),
         spectators: room.spectators.map(p => ({ username: p.username, seat: null, isAI: false })),
+        state: room.state ? renderForPlayer(room.state, 0) : null,
       });
       broadcastAll(roomId, 'mahjong_spectator_joined', {
         username, spectators: room.spectators.map(p => ({ username: p.username })),
@@ -533,9 +534,14 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
       if (r8.state.currentPlayer !== p.seat) return;
 
       const idx = payload.tileIndex;
-      const result = discardTile(r8.state, p.seat, idx);
-      if (!result) { send(ws, 'error', { message: '出牌失败' }); return; }
+      const sortedHand = sortHand(r8.state.hands[p.seat]);
+      if (idx < 0 || idx >= sortedHand.length) { send(ws, 'error', { message: '无效牌索引' }); return; }
+      const targetTile = sortedHand[idx];
+      const actualIdx = r8.state.hands[p.seat].findIndex(t => t.suit === targetTile.suit && t.value === targetTile.value);
+      const result = discardTile(r8.state, p.seat, actualIdx);
+      if (!result) { console.log('[Discard] discardTile returned null'); send(ws, 'error', { message: '出牌失败' }); return; }
       r8.state = result.state;
+      console.log('[Discard] SUCCESS - tile:', result.tile.suit, result.tile.value);
       broadcastAll(r8.roomId, 'mahjong_discarded', {
         seat: p.seat, tile: result.tile,
         state: renderForPlayer(r8.state, 0),
