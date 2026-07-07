@@ -13,6 +13,7 @@ import adminRoutes from './routes/admin.js';
 import sgfRoutes from './routes/sgf.js';
 import gamesRoutes from './routes/games.js';
 import usersRoutes from './routes/users.js';
+import musicRoutes from './routes/music.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -28,6 +29,12 @@ app.use('/api/avatars', express.static(join(__dirname, '..', 'data', 'avatars'),
   setHeaders: (res) => { res.setHeader('Cache-Control', 'public, max-age=604800'); },
 }));
 
+// 音乐文件静态服务
+app.use('/api/music/files', express.static(join(__dirname, '..', 'music'), {
+  maxAge: '7d',
+  setHeaders: (res) => { res.setHeader('Cache-Control', 'public, max-age=604800'); },
+}));
+
 async function start() {
   await initDb();
 
@@ -37,6 +44,7 @@ async function start() {
   app.use('/api/sgf', sgfRoutes);
   app.use('/api/games', gamesRoutes);
   app.use('/api/users', usersRoutes);
+  app.use('/api/music', musicRoutes);
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
   });

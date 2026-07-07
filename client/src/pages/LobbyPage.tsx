@@ -5,6 +5,7 @@ import { modalAlert } from '../components/Modal';
 import { useFavicon } from '../hooks/useFavicon';
 import StarfieldBackground from '../components/StarfieldBackground';
 import UserProfileModal from '../components/UserProfileModal';
+import MusicPlayer from '../components/MusicPlayer';
 import type { RoomInfo, GameInfo } from '@lan-boardgame/shared';
 
 export default function LobbyPage() {
@@ -24,6 +25,7 @@ export default function LobbyPage() {
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [games, setGames] = useState<GameInfo[]>([]);
   const [showProfile, setShowProfile] = useState(false);
+  const [showMusicPlayer, setShowMusicPlayer] = useState(false);
   const [bgEnabled, setBgEnabled] = useState(() => localStorage.getItem('lobby_bg') !== 'off');
 
   // 未登录重定向
@@ -167,6 +169,7 @@ export default function LobbyPage() {
             }}
             title={bgEnabled ? '关闭背景动效' : '开启背景动效'}
           >{bgEnabled ? '✦' : '✧'}</button>
+          <button className="btn-music" onClick={() => setShowMusicPlayer(true)} title="音乐播放器">♫</button>
         </div>
       </header>
 
@@ -249,6 +252,10 @@ export default function LobbyPage() {
 
       {showProfile && username && (
         <UserProfileModal username={username} isMe onClose={() => setShowProfile(false)} />
+      )}
+
+      {showMusicPlayer && (
+        <MusicPlayer onClose={() => setShowMusicPlayer(false)} />
       )}
     </div>
   );

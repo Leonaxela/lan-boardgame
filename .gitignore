@@ -4,3 +4,4 @@ client/dist/
 .reasonix/
 reasonix.toml
 server/katago/**/gtp_logs/
+server/music/

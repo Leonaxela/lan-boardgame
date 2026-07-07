@@ -14,23 +14,28 @@ class WSClient {
   private connected = false;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private intentionalClose = false;
+  private connectPromise: Promise<void> | null = null;
   /** 缓存最后一条消息（解决页面跳转后新组件收不到的问题） */
   private lastMessage = new Map<string, any>();
 
-  /** 连接 */
+  /** 连接（去重：若已有连接或正在连接，返回已有 Promise） */
   connect(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (this.ws?.readyState === WebSocket.OPEN) {
-        resolve();
-        return;
-      }
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+    // 已有正在建立的连接，复用 Promise 避免创建重复 WebSocket
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
 
+    this.connectPromise = new Promise((resolve, reject) => {
       this.intentionalClose = false;
       this.ws = new WebSocket(WS_URL);
 
       this.ws.onopen = () => {
         console.log('[WS] 已连接');
         this.connected = true;
+        this.connectPromise = null;
         resolve();
       };
 
@@ -45,6 +50,7 @@ class WSClient {
 
       this.ws.onclose = () => {
         this.connected = false;
+        this.connectPromise = null;
         console.log('[WS] 连接断开');
         if (!this.intentionalClose) {
           this.scheduleReconnect();
@@ -52,10 +58,13 @@ class WSClient {
       };
 
       this.ws.onerror = (err) => {
+        this.connectPromise = null;
         console.error('[WS] 错误', err);
         reject(err);
       };
     });
+
+    return this.connectPromise;
   }
 
   /** 断开连接 */
