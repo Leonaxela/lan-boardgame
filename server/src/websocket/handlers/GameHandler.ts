@@ -4,10 +4,26 @@ import { Room, RoomPlayer, RoomActivity } from '../../room/Room.js';
 import { GO_COLORS } from '@lan-boardgame/go';
 import { GOMOKU_COLORS } from '@lan-boardgame/gomoku';
 import { kataGoManager } from '../../katago/KataGoManager.js';
+import { fairyStockfishManager } from '../../fairy-stockfish/FairyStockfishManager.js';
 import { getEngine, updateClock, enrichGameResult, sendError } from '../utils.js';
 import type { ClientMessage, DispatcherContext } from '../types.js';
 import { scheduleKataGoMove, sendKatagoAnalysisReport } from './KataGoHandler.js';
+import { scheduleFairyStockfishMove } from './FairyStockfishHandler.js';
 import { saveGameRecord } from '../records/GameRecordSaver.js';
+
+/** 同步玩家落子到 Fairy-Stockfish 并调度 AI 走棋 */
+function playFairyMove(room: Room, _playerColor: string): void {
+  if (!room.gameState) return;
+  const fairyPlayer = room.players.find(p => p.id.startsWith('ai-fairy'));
+  if (!fairyPlayer || room.gameState.currentTurn !== fairyPlayer.color) return;
+  const lastMove = room.moveHistory[room.moveHistory.length - 1];
+  if (!lastMove) return;
+  // 从 moveHistory 取 from 位置（extra.from 在 applyMove 后已被清掉）
+  const fromPos = lastMove.fromRow !== undefined ? { row: lastMove.fromRow as number, col: lastMove.fromCol as number } : undefined;
+  if (!fromPos) return;
+  fairyStockfishManager.playMove(room.roomId, fromPos, { row: lastMove.row as number, col: lastMove.col as number }).catch(() => {});
+  scheduleFairyStockfishMove(room);
+}
 
 export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<string, Function>, scheduleAIMove: (room: Room) => void): void {
 
@@ -89,6 +105,11 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
             };
             doKataGo();
           }
+        } else if (room.fairyStockfishGame) {
+          const fairyPlayer = room.players.find(p => p.id.startsWith('ai-fairy'));
+          if (fairyPlayer && room.gameState.currentTurn === fairyPlayer.color) {
+            playFairyMove(room, player.color as 'red' | 'white');
+          }
         } else {
           let aiColor: string;
           if (room.gameType === GameType.Gomoku) aiColor = GOMOKU_COLORS.WHITE;
@@ -144,6 +165,9 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
         kataGoManager.destroySession(room.roomId);
         sendKatagoAnalysisReport(room);
       }
+      if (room.fairyStockfishGame) {
+        fairyStockfishManager.destroySession(room.roomId);
+      }
       saveGameRecord(room, result);
       room.broadcast({
         type: 'game_over',
@@ -171,6 +195,9 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
     if (room.katagoGame) {
       sendKatagoAnalysisReport(room);
       kataGoManager.destroySession(room.roomId);
+    }
+    if (room.fairyStockfishGame) {
+      fairyStockfishManager.destroySession(room.roomId);
     }
     saveGameRecord(room, result);
     room.broadcast({

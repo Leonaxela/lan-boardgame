@@ -52,19 +52,32 @@ export default function ChineseChessBoard({
   const cellH = (height - padY * 2) / (ROWS - 1);
   const pieceR = Math.min(cellW, cellH) * 0.42;
 
+  const transformRow = useCallback((row: number) => {
+    if (myColor === 'black') return ROWS - 1 - row;
+    return row;
+  }, [myColor]);
+
+  const transformCol = useCallback((col: number) => {
+    if (myColor === 'black') return COLS - 1 - col;
+    return col;
+  }, [myColor]);
+
   const toCanvas = useCallback((row: number, col: number) => ({
-    x: padX + col * cellW,
-    y: padY + row * cellH,
-  }), [cellW, cellH]);
+    x: padX + transformCol(col) * cellW,
+    y: padY + transformRow(row) * cellH,
+  }), [cellW, cellH, transformRow, transformCol]);
 
   const fromCanvas = useCallback((px: number, py: number): { row: number; col: number } | null => {
     const col = Math.round((px - padX) / cellW);
     const row = Math.round((py - padY) / cellH);
     if (row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
-    const { x, y } = toCanvas(row, col);
-    if (Math.abs(px - x) > cellW * 0.45 || Math.abs(py - y) > cellH * 0.45) return null;
-    return { row, col };
-  }, [cellW, cellH, toCanvas]);
+    // 校验点击位置是否在格子中心附近（用原始坐标）
+    const cx = padX + col * cellW;
+    const cy = padY + row * cellH;
+    if (Math.abs(px - cx) > cellW * 0.45 || Math.abs(py - cy) > cellH * 0.45) return null;
+    // 翻转后返回逻辑坐标
+    return { row: transformRow(row), col: transformCol(col) };
+  }, [cellW, cellH, transformRow, transformCol]);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;

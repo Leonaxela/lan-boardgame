@@ -195,6 +195,9 @@ export default function ChineseChessRoomPage() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [aiDifficulty, setAiDifficulty] = useState(2);
   const [showDiffInfo, setShowDiffInfo] = useState(false);
+  const [showFairyConfig, setShowFairyConfig] = useState(false);
+  const [fairyDifficulty, setFairyDifficulty] = useState(2);
+  const [fairyPlayerColor, setFairyPlayerColor] = useState('red');
   const [guessNumber, setGuessNumber] = useState('');
   const prevInCheck = useRef(false);
 
@@ -219,6 +222,7 @@ export default function ChineseChessRoomPage() {
   }, [gameState?.extra?.inCheck, gameState?.phase]);
 
   return (
+    <>
     <div className="room-page">
       {/* 移动端顶部工具栏 */}
       {isMobile && (
@@ -267,9 +271,13 @@ export default function ChineseChessRoomPage() {
         </div>
         <div className="sidebar-actions">
           {isOwner && (!gameState || gameState.phase === 'finished') && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 3 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+              <button className="btn-sidebar" style={{ whiteSpace: 'nowrap' }}
+                onClick={() => setShowFairyConfig(true)}>
+                🤖 与Fairy-Stockfish对弈
+              </button>
               <button className="btn-sidebar" style={{ whiteSpace: 'nowrap' }} onClick={() => wsClient.send('start_ai_game', { difficulty: aiDifficulty })}>🤖 AI 对弈</button>
-              <Dropdown
+                <Dropdown
                 options={[{value:'1',label:'简单'},{value:'2',label:'普通'},{value:'3',label:'中等'},{value:'4',label:'困难'}]}
                 value={String(aiDifficulty)}
                 onChange={v => setAiDifficulty(Number(v))}
@@ -384,9 +392,15 @@ export default function ChineseChessRoomPage() {
               {room?.players?.some(p => p.id === myId) ? (
                 rematchState === 'opponent_exited' ? <p className="text-muted">对方已退出</p> : (
                   <div className="rematch-buttons">
-                    <button className="btn-primary" onClick={requestRematch} disabled={rematchState === 'sent'}>
-                      {rematchState === 'sent' ? '已申请再战' : rematchState === 'opponent_sent' ? '对方已申请再战' : '再战一局'}
-                    </button>
+                    {room?.players?.some(p => p.id.startsWith('ai-fairy')) ? (
+                      <button className="btn-primary" onClick={() => wsClient.send('start_fairy_stockfish_game', { skillLevel: fairyDifficulty, playerColor: fairyPlayerColor })}>
+                        再战一局
+                      </button>
+                    ) : (
+                      <button className="btn-primary" onClick={requestRematch} disabled={rematchState === 'sent'}>
+                        {rematchState === 'sent' ? '已申请再战' : rematchState === 'opponent_sent' ? '对方已申请再战' : '再战一局'}
+                      </button>
+                    )}
                     <button className="btn-close" onClick={exitAfterGame}>退出</button>
                     <p className="text-muted" style={{ marginTop: 8 }}>⏳ {rematchTimer}s</p>
                   </div>
@@ -548,5 +562,81 @@ export default function ChineseChessRoomPage() {
         </div>
       </aside>
     </div>
+
+    {/* Fairy-Stockfish 配置弹窗 */}
+    {showFairyConfig && (
+      <div className="modal-overlay" onClick={() => setShowFairyConfig(false)}>
+        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ minWidth: 320, maxWidth: 380 }}>
+          <h2 style={{ marginBottom: 16, textAlign: 'center' }}>🤖 与Fairy-Stockfish对弈</h2>
+
+          {/* 执子 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>执子</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, border: `1px solid ${fairyPlayerColor === 'red' ? '#dcb35c' : 'rgba(255,255,255,0.1)'}`,
+                  background: fairyPlayerColor === 'red' ? 'rgba(220,179,92,0.1)' : 'transparent', color: fairyPlayerColor === 'red' ? '#dcb35c' : '#aaa',
+                  cursor: 'pointer', fontSize: 13, transition: '0.15s',
+                }}
+                onClick={() => setFairyPlayerColor('red')}
+              >🔴 执红（先手）</button>
+              <button
+                style={{
+                  flex: 1, padding: '8px 0', borderRadius: 8, border: `1px solid ${fairyPlayerColor === 'black' ? '#dcb35c' : 'rgba(255,255,255,0.1)'}`,
+                  background: fairyPlayerColor === 'black' ? 'rgba(220,179,92,0.1)' : 'transparent', color: fairyPlayerColor === 'black' ? '#dcb35c' : '#aaa',
+                  cursor: 'pointer', fontSize: 13, transition: '0.15s',
+                }}
+                onClick={() => setFairyPlayerColor('black')}
+              >⚫ 执黑（后手）</button>
+            </div>
+          </div>
+
+          {/* 难度 */}
+          <div style={{ marginBottom: 20 }}>
+            <label style={{ display: 'block', fontSize: 13, color: 'rgba(255,255,255,0.5)', marginBottom: 6 }}>难度</label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[
+                { value: 1, label: '简单', desc: 'depth 6' },
+                { value: 2, label: '普通', desc: 'depth 10' },
+                { value: 3, label: '中等', desc: 'depth 14' },
+                { value: 4, label: '困难', desc: 'depth 18' },
+                { value: 5, label: '顶级', desc: 'depth 22' },
+              ].map(d => (
+                <button
+                  key={d.value}
+                  style={{
+                    flex: 1, padding: '8px 0', borderRadius: 8, border: `1px solid ${fairyDifficulty === d.value ? '#dcb35c' : 'rgba(255,255,255,0.1)'}`,
+                    background: fairyDifficulty === d.value ? 'rgba(220,179,92,0.1)' : 'transparent',
+                    color: fairyDifficulty === d.value ? '#dcb35c' : '#aaa',
+                    cursor: 'pointer', fontSize: 12, transition: '0.15s',
+                  }}
+                  onClick={() => setFairyDifficulty(d.value)}
+                >{d.label}</button>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4, textAlign: 'center' }}>
+              {['思考3秒', '思考8秒', '思考15秒', '思考30秒', '思考55秒'][fairyDifficulty - 1]}
+            </div>
+          </div>
+
+          {/* 操作按钮 */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button
+              style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: '1px solid rgba(255,255,255,0.15)', background: 'transparent', color: '#aaa', cursor: 'pointer', fontSize: 14 }}
+              onClick={() => setShowFairyConfig(false)}
+            >取消</button>
+            <button
+              style={{ flex: 2, padding: '10px 0', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg, #2e7d32, #1b5e20)', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
+              onClick={() => {
+                wsClient.send('start_fairy_stockfish_game', { skillLevel: fairyDifficulty, playerColor: fairyPlayerColor });
+                setShowFairyConfig(false);
+              }}
+            >开始对弈</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

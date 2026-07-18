@@ -5,3 +5,4 @@ client/dist/
 reasonix.toml
 server/katago/**/gtp_logs/
 server/music/
+server/fairy-stockfish/

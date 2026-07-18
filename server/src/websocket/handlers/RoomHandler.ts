@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { GameType, GameConfig, GamePhase } from '@lan-boardgame/shared';
 import { Room, RoomPlayer, RoomActivity } from '../../room/Room.js';
 import { kataGoManager } from '../../katago/KataGoManager.js';
+import { fairyStockfishManager } from '../../fairy-stockfish/FairyStockfishManager.js';
 import { upsertUserSession, removeUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed } from '../../room/RoomPersistence.js';
 import { getEngine, enrichGameResult, sendError } from '../utils.js';
 import type { ClientMessage, DispatcherContext } from '../types.js';
@@ -98,6 +99,7 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
       removeUserSession(player.id);
       if (player.isOwner) {
         if (room.katagoGame) kataGoManager.destroySession(room.roomId);
+        if (room.fairyStockfishGame) fairyStockfishManager.destroySession(room.roomId);
         try { removeActiveRoom(room.roomId); } catch (e) { console.error('[leave_room] removeActiveRoom 失败:', e); }
         logRoomDestroyed(room.roomId);
         room.broadcast({

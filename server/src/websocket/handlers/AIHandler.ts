@@ -78,7 +78,7 @@ export function createScheduleAIMove(ctx: DispatcherContext): (room: Room) => vo
         room.aiConsecutivePasses = 0;
         room.broadcast({
           type: 'game_state',
-          payload: { gameState: room.gameState, message: '🤖 电脑已放弃，对局结束' },
+          payload: { gameState: room.gameState, message: '🤖 电脑已放弃，对局结束', movedBy: 'ai' },
         });
         setTimeout(() => {
           if (!room.gameState || room.gameState.phase !== GamePhase.Playing) return;
@@ -124,7 +124,7 @@ export function createScheduleAIMove(ctx: DispatcherContext): (room: Room) => vo
       } else {
         room.broadcast({
           type: 'game_state',
-          payload: { gameState: room.gameState },
+          payload: { gameState: room.gameState, movedBy: 'ai' },
         });
       }
     }, 1500);

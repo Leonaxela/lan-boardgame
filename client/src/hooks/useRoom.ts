@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { wsClient } from '../net/WebSocketClient';
 import { modalAlert, modalConfirm } from '../components/Modal';
+import { playMoveSound } from '../utils/sound';
 
 interface RoomPlayer {
   id: string;
@@ -145,7 +146,10 @@ export function useRoom() {
       }
     }));
 
-    unsubs.push(wsClient.on('game_state', (p) => { setGameState(p.gameState); }));
+    unsubs.push(wsClient.on('game_state', (p) => {
+      setGameState(p.gameState);
+      if (p.movedBy === 'ai') playMoveSound();
+    }));
 
     // 申请终局数子
     unsubs.push(wsClient.on('counting_sent', (p) => { modalAlert(p.message || '已申请终局数子'); }));
@@ -158,7 +162,11 @@ export function useRoom() {
 
     unsubs.push(wsClient.on('game_over', (p) => {
       setGameState(p.gameState);
-      setGameResult(p.result);
+      if (p.isAiGame) {
+        setTimeout(() => { setGameResult(p.result); }, 3000);
+      } else {
+        setGameResult(p.result);
+      }
       setRematchState(null);
     }));
 

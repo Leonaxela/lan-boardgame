@@ -10,6 +10,7 @@ import { registerRoomHandlers } from './handlers/RoomHandler.js';
 import { registerGameHandlers } from './handlers/GameHandler.js';
 import { registerAIHandlers, createScheduleAIMove } from './handlers/AIHandler.js';
 import { registerKataGoHandlers } from './handlers/KataGoHandler.js';
+import { registerFairyStockfishHandlers } from './handlers/FairyStockfishHandler.js';
 import { registerChallengeHandlers } from './handlers/ChallengeHandler.js';
 
 export class Dispatcher {
@@ -31,6 +32,7 @@ export class Dispatcher {
     registerGameHandlers(ctx, this.handlers, scheduleAIMove);
     registerAIHandlers(ctx, this.handlers);
     registerKataGoHandlers(ctx, this.handlers);
+    registerFairyStockfishHandlers(ctx, this.handlers);
     registerChallengeHandlers(ctx, this.handlers);
 
     this.handlers.set('ping', (_ws: WebSocket, _msg: ClientMessage) => { /* handled by WSServer */ });
@@ -54,7 +56,7 @@ export class Dispatcher {
     const room = this.roomManager.findRoomByWs(ws);
     const player = room?.getPlayerByWs(ws);
 
-    if (['create_room', 'join_room', 'get_rooms', 'ping', 'start_ai_game', 'start_katago_game', 'rejoin_room'].includes(msg.type)) {
+    if (['create_room', 'join_room', 'get_rooms', 'ping', 'start_ai_game', 'start_katago_game', 'start_fairy_stockfish_game', 'rejoin_room'].includes(msg.type)) {
       handler(ws, msg, player as RoomPlayer, room as Room);
     } else if (player && room) {
       handler(ws, msg, player, room);

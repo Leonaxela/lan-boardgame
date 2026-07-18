@@ -141,7 +141,7 @@ router.get('/users', authenticate, requireAdmin, (req: Request, res: Response) =
   const users = queryAll(
     `SELECT id, username, role, nickname, avatar_path, avatar_status, birth_date, gender, hometown, occupation, hobbies,
             total_games, win_games, last_online_at, total_online_seconds, created_at, banned
-     FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+     FROM users ${where} ORDER BY last_online_at DESC, created_at DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );
 

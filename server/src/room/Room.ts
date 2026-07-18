@@ -69,6 +69,8 @@ export class Room {
   // ── 游戏状态属性（原 (room as any) 动态字段）──
   /** 是否是 KataGo 对弈 */
   katagoGame: boolean = false;
+  /** 是否是 Fairy-Stockfish 对弈 */
+  fairyStockfishGame: boolean = false;
   /** KataGo 棋盘大小 */
   katagoBoardSize: number = 19;
   /** AI 难度等级 */
