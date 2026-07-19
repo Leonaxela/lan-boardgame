@@ -17,13 +17,9 @@ interface Props {
 const ROWS = 8;
 const COLS = 8;
 
-const PIECE_SYMBOLS: Record<string, Record<string, string>> = {
-  king:   { white: '♔', black: '♚' },
-  queen:  { white: '♕', black: '♛' },
-  rook:   { white: '♖', black: '♜' },
-  bishop: { white: '♗', black: '♝' },
-  knight: { white: '♘', black: '♞' },
-  pawn:   { white: '♙', black: '♟' },
+/** 内部类型 → SVG 文件名后缀 */
+const PIECE_FILE: Record<string, string> = {
+  king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: 'P',
 };
 
 function parsePiece(s: string | null): { type: string; color: string } | null {
@@ -36,8 +32,24 @@ function parsePiece(s: string | null): { type: string; color: string } | null {
 const LIGHT_SQ = '#f0d9b5';
 const DARK_SQ = '#b58863';
 const SELECTED_COLOR = 'rgba(220,179,92,0.55)';
-const VALID_MOVE_COLOR = 'rgba(0,0,0,0.15)';
+const VALID_MOVE_COLOR = 'rgba(76,175,80,0.5)';
 const LAST_MOVE_COLOR = 'rgba(155,199,0,0.41)';
+
+/** 预加载棋子 SVG 图片 */
+function loadPieceImages(): Record<string, HTMLImageElement> {
+  const imgs: Record<string, HTMLImageElement> = {};
+  const colors = ['w', 'b'];
+  const types = ['K', 'Q', 'R', 'B', 'N', 'P'];
+  for (const c of colors) {
+    for (const t of types) {
+      const key = `${c}${t}`;
+      const img = new Image();
+      img.src = `/pieces/${key}.svg`;
+      imgs[key] = img;
+    }
+  }
+  return imgs;
+}
 
 export default function ChessBoard({
   board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, onSelect,
@@ -45,6 +57,12 @@ export default function ChessBoard({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoverPos, setHoverPos] = useState<{ row: number; col: number } | null>(null);
+  const imagesRef = useRef<Record<string, HTMLImageElement>>({});
+
+  // 懒加载图片
+  useEffect(() => {
+    imagesRef.current = loadPieceImages();
+  }, []);
 
   const padding = 30;
   const cellSize = Math.min(
@@ -124,14 +142,12 @@ export default function ChessBoard({
       const { x, y } = toCanvas(move.row, move.col);
       const target = board[move.row]?.[move.col];
       if (target) {
-        // 吃子位置：空心圆环
         ctx.strokeStyle = VALID_MOVE_COLOR;
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(x, y, cellSize * 0.44, 0, Math.PI * 2);
         ctx.stroke();
       } else {
-        // 空位：实心小圆点
         ctx.fillStyle = VALID_MOVE_COLOR;
         ctx.beginPath();
         ctx.arc(x, y, cellSize * 0.15, 0, Math.PI * 2);
@@ -139,30 +155,30 @@ export default function ChessBoard({
       }
     }
 
-    // ── 棋子 ──
+    // ── 棋子（SVG 图片） ──
+    const imgs = imagesRef.current;
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const piece = parsePiece(board[r]?.[c]);
         if (!piece) continue;
         const { x, y } = toCanvas(r, c);
-        const symbol = PIECE_SYMBOLS[piece.type]?.[piece.color] || '?';
-
-        // 阴影
-        ctx.fillStyle = 'rgba(0,0,0,0.18)';
-        ctx.font = `${cellSize * 0.72}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(symbol, x + 1, y + 2);
-
-        // 棋子
-        ctx.fillStyle = piece.color === 'white' ? '#ffffff' : '#1a1a1a';
-        ctx.fillText(symbol, x, y);
-
-        // 白棋描边
-        if (piece.color === 'white') {
-          ctx.strokeStyle = '#333';
-          ctx.lineWidth = 0.5;
-          ctx.strokeText(symbol, x, y);
+        const fileKey = `${piece.color === 'white' ? 'w' : 'b'}${PIECE_FILE[piece.type] || ''}`;
+        const img = imgs[fileKey];
+        if (img && img.complete) {
+          const sz = cellSize * 0.88;
+          ctx.drawImage(img, x - sz / 2, y - sz / 2, sz, sz);
+        } else {
+          // 图片未加载完成时 fallback 显示 Unicode
+          ctx.fillStyle = piece.color === 'white' ? '#fff' : '#000';
+          ctx.font = `${cellSize * 0.72}px serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const fallback: Record<string, Record<string, string>> = {
+            king: { white: '♔', black: '♚' }, queen: { white: '♕', black: '♛' },
+            rook: { white: '♖', black: '♜' }, bishop: { white: '♗', black: '♝' },
+            knight: { white: '♘', black: '♞' }, pawn: { white: '♙', black: '♟' },
+          };
+          ctx.fillText(fallback[piece.type]?.[piece.color] || '?', x, y);
         }
       }
     }

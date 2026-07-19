@@ -17,6 +17,31 @@ import { isInCheck, isCheckmate, isStalemate, wouldBeInCheck } from './check';
 export class ChessEngine implements IGameEngine {
   readonly gameType = GameType.Chess;
 
+  /** 获取某位置棋子的合法目标位置（客户端显示绿点用） */
+  getLegalMoves(state: GameState, pos: Position): Position[] {
+    const board = state.board as unknown as Board;
+    const piece = board[pos.row]?.[pos.col];
+    if (!piece) return [];
+    const extra = getIntlExtra(state.extra);
+    const color = intlPieceColor(piece) as IntlColor;
+    const type = intlPieceType(piece);
+    const inCheck = isInCheck(board, color);
+    let rawMoves: RawMove[];
+    if (type === INTL_PIECES.KING) {
+      rawMoves = getKingMovesWithCastling(board, pos, color, extra.castling, inCheck,
+        (from, to) => wouldBeInCheck(board, from, to, color));
+    } else {
+      rawMoves = getRawMoves(board, pos);
+    }
+    // 过滤掉导致被将军的走法
+    return rawMoves.filter(m => {
+      const nb = cloneBoard(board);
+      nb[m.to.row][m.to.col] = nb[pos.row][pos.col];
+      nb[pos.row][pos.col] = null;
+      return !isInCheck(nb, color);
+    }).map(m => m.to);
+  }
+
   createInitialState(_config: GameConfig, _players: Player[]): GameState {
     const board = createInitialBoard();
     return {

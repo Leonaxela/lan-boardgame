@@ -5,6 +5,7 @@ import { useWebSocket } from '../../hooks/useWebSocket';
 import { wsClient } from '../../net/WebSocketClient';
 import { formatChatTime, isSystemMsg, shouldShowTimeDivider, renderHighlightedText } from '../../utils/chat';
 import ChessBoard from '../../games/chess/ChessBoard';
+import { ChessEngine } from '@lan-boardgame/chess/engine';
 import Confetti from '../../components/Confetti';
 import { playVictorySound } from '../../utils/sound';
 import { getGameResultText } from '../../utils/gameResult';
@@ -126,6 +127,9 @@ export default function ChessRoomPage() {
     if (selectedPos) {
       if (piece && piece.startsWith(myColor || '')) {
         setSelectedPos({ row, col });
+        const engine = new ChessEngine();
+        const moves = engine.getLegalMoves(gameState, { row, col });
+        setValidMoves(moves);
         return;
       }
       wsClient.send('place', { from: selectedPos, position: { row, col } });
@@ -134,16 +138,9 @@ export default function ChessRoomPage() {
     } else {
       if (piece && piece.startsWith(myColor || '')) {
         setSelectedPos({ row, col });
-        const moves: { row: number; col: number }[] = [];
-        for (let r = 0; r < ROWS; r++) {
-          for (let c = 0; c < COLS; c++) {
-            if (r === row && c === col) continue;
-            const target = board[r]?.[c];
-            if (!target || !target.startsWith(myColor || '')) {
-              moves.push({ row: r, col: c });
-            }
-          }
-        }
+        // 使用引擎计算合法走法，只显示确实可移动到的格子
+        const engine = new ChessEngine();
+        const moves = engine.getLegalMoves(gameState, { row, col });
         setValidMoves(moves);
       }
     }
@@ -180,6 +177,21 @@ export default function ChessRoomPage() {
   });
 
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // AI 对局终局弹窗延迟 3 秒
+  const [showGameOver, setShowGameOver] = useState(false);
+  useEffect(() => {
+    if (gameResult) {
+      const isAiGame = room?.players?.some(p => p.id.startsWith('ai-'));
+      if (isAiGame) {
+        const t = setTimeout(() => setShowGameOver(true), 3000);
+        return () => clearTimeout(t);
+      }
+      setShowGameOver(true);
+    } else {
+      setShowGameOver(false);
+    }
+  }, [gameResult, room?.players]);
   const [aiDifficulty, setAiDifficulty] = useState(2);
   const [showDiffInfo, setShowDiffInfo] = useState(false);
   const [showFairyConfig, setShowFairyConfig] = useState(false);
@@ -347,7 +359,7 @@ export default function ChessRoomPage() {
 
         {/* 终局弹窗 */}
         <Confetti active={showConfetti} />
-        {gameResult && (
+        {showGameOver && (
           <div className="modal-overlay">
             <div className="modal-content game-over-modal">
               <h2>{winnerText}</h2>

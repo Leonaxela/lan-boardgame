@@ -192,6 +192,21 @@ export default function ChineseChessRoomPage() {
     gameType: 'chinese-chess',
   });
 
+  // AI 对局终局弹窗延迟 3 秒
+  const [showGameOver, setShowGameOver] = useState(false);
+  useEffect(() => {
+    if (gameResult) {
+      const isAiGame = room?.players?.some(p => p.id.startsWith('ai-'));
+      if (isAiGame) {
+        const t = setTimeout(() => setShowGameOver(true), 3000);
+        return () => clearTimeout(t);
+      }
+      setShowGameOver(true);
+    } else {
+      setShowGameOver(false);
+    }
+  }, [gameResult, room?.players]);
+
   const [showConfetti, setShowConfetti] = useState(false);
   const [aiDifficulty, setAiDifficulty] = useState(2);
   const [showDiffInfo, setShowDiffInfo] = useState(false);
@@ -385,7 +400,7 @@ export default function ChineseChessRoomPage() {
 
         {/* 终局弹窗 */}
         <Confetti active={showConfetti} />
-        {gameResult && (
+        {showGameOver && (
           <div className="modal-overlay">
             <div className="modal-content game-over-modal">
               <h2>{winnerText}</h2>

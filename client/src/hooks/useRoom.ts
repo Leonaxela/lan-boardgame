@@ -162,11 +162,7 @@ export function useRoom() {
 
     unsubs.push(wsClient.on('game_over', (p) => {
       setGameState(p.gameState);
-      if (p.isAiGame) {
-        setTimeout(() => { setGameResult(p.result); }, 3000);
-      } else {
-        setGameResult(p.result);
-      }
+      setGameResult(p.result);
       setRematchState(null);
     }));
 
