@@ -35,6 +35,12 @@ interface FairyStockfishSession {
   readyResolve: (() => void) | null;
   /** 已走的历史棋步（UCI/UCCI 格式） */
   moveHistory: string[];
+  /** 最新评估分（centipawn，正数=白方/红方优势） */
+  lastScore: number | null;
+  /** 最新搜索深度 */
+  lastDepth: number | null;
+  /** 最新 PV（最佳走法序列，UCI 格式） */
+  lastPv: string | null;
 }
 
 // ════════════════════════════════════════════
@@ -119,6 +125,9 @@ export class FairyStockfishManager {
       timeoutTimer: null,
       readyResolve: null,
       moveHistory: [],
+      lastScore: null,
+      lastDepth: null,
+      lastPv: null,
     };
 
     this.sessions.set(roomId, session);
@@ -248,6 +257,27 @@ export class FairyStockfishManager {
       }
 
       // id name 等行继续等待
+
+      // 从 info 行捕获评估分、深度、PV：info depth 12 score cp 45 pv e2e4 e7e5 ...
+      if (line.startsWith('info') && line.includes('score')) {
+        const cpMatch = line.match(/score cp\s+(-?\d+)/);
+        if (cpMatch) {
+          session.lastScore = parseInt(cpMatch[1], 10) / 100;
+        }
+        const mateMatch = line.match(/score mate\s+(-?\d+)/);
+        if (mateMatch) {
+          const mateIn = parseInt(mateMatch[1], 10);
+          session.lastScore = mateIn > 0 ? 100 : -100;
+        }
+        const depthMatch = line.match(/depth\s+(\d+)/);
+        if (depthMatch) {
+          session.lastDepth = parseInt(depthMatch[1], 10);
+        }
+        const pvMatch = line.match(/\bpv\s+((?:[a-z0-9]+\s*)+)/i);
+        if (pvMatch) {
+          session.lastPv = pvMatch[1].trim();
+        }
+      }
     }
 
     // 如果 buffer 过长，截断防止内存泄漏
@@ -306,6 +336,33 @@ export class FairyStockfishManager {
       console.error(`[Fairy-Stockfish] getBestMove 错误:`, err);
       return null;
     }
+  }
+
+  /** 快速评估当前局面（500ms 搜索，更新 lastScore/depth/PV，不返回走法） */
+  async quickEval(roomId: string): Promise<void> {
+    const session = this.sessions.get(roomId);
+    if (!session) return;
+    try {
+      const movesStr = session.moveHistory.join(' ');
+      const posCmd = movesStr ? `position startpos moves ${movesStr}` : 'position startpos';
+      this.sendSilentCommand(roomId, posCmd);
+      await this.sendCommand(roomId, 'go movetime 500', 30000);
+    } catch { /* 超时无所谓 */ }
+  }
+
+  /** 获取最近一次搜索的评估分（centipawn，正数=白方/红方优势） */
+  getLastScore(roomId: string): number | null {
+    return this.sessions.get(roomId)?.lastScore ?? null;
+  }
+
+  /** 获取最近一次搜索的深度 */
+  getLastDepth(roomId: string): number | null {
+    return this.sessions.get(roomId)?.lastDepth ?? null;
+  }
+
+  /** 获取最近一次搜索的 PV（最佳走法序列） */
+  getLastPv(roomId: string): string | null {
+    return this.sessions.get(roomId)?.lastPv ?? null;
   }
 
   /** 销毁房间会话 */

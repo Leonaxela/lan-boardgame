@@ -132,8 +132,8 @@ export function createScheduleAIMove(ctx: DispatcherContext): (room: Room) => vo
 }
 
 export function registerAIHandlers(ctx: DispatcherContext, handlers: Map<string, Function>): void {
-  handlers.set('start_ai_game', (ws: WebSocket, msg: ClientMessage, _player: RoomPlayer, room: Room) => {
-    if (!room || room.owner?.ws !== ws) {
+  handlers.set('start_ai_game', (ws: WebSocket, msg: ClientMessage, player: RoomPlayer, room: Room) => {
+    if (!room || !player || room.owner?.id !== player.id) {
       sendError(ws, 'NOT_OWNER', '只有房主能开始 AI 对弈');
       return;
     }

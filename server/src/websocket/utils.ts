@@ -20,9 +20,11 @@ export function getEngine(gameType: GameType, config: GameConfig) {
   return new ChineseGoEngine();
 }
 
-/** 更新棋钟（仅围棋） */
+/** 更新棋钟 */
 export function updateClock(room: Room, playerColor: string): void {
-  if (room.gameType !== GameType.Go || !room.gameState) return;
+  if (!room.gameState) return;
+  // 国际跳棋无棋钟
+  if (room.gameType === GameType.Draughts) return;
 
   const now = Date.now();
   let blackTotal = 0;
@@ -45,10 +47,10 @@ export function updateClock(room: Room, playerColor: string): void {
     ...room.gameState,
     clock: {
       black: { moveTime: playerColor === 'black' ? elapsed : (prevClock?.black.moveTime || 0), totalTime: blackTotal },
-      white: { moveTime: playerColor === 'white' ? elapsed : (prevClock?.white.moveTime || 0), totalTime: whiteTotal },
+      white: { moveTime: playerColor === 'white' || playerColor === 'red' ? elapsed : (prevClock?.white.moveTime || 0), totalTime: whiteTotal },
       lastMoveAt: now,
       blackTurnAt: playerColor === 'black' ? (prevClock?.blackTurnAt || now) : now,
-      whiteTurnAt: playerColor === 'white' ? (prevClock?.whiteTurnAt || now) : now,
+      whiteTurnAt: playerColor === 'white' || playerColor === 'red' ? (prevClock?.whiteTurnAt || now) : now,
     },
   };
 }

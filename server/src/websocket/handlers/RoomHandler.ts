@@ -20,7 +20,7 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
     const player: RoomPlayer = {
       id: crypto.randomUUID(),
       username,
-      color: 'black',
+      color: 'white',
       ws,
       isOwner: true,
       joinedAt: Date.now(),

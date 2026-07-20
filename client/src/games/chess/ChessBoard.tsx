@@ -17,7 +17,6 @@ interface Props {
 const ROWS = 8;
 const COLS = 8;
 
-/** 内部类型 → SVG 文件名后缀 */
 const PIECE_FILE: Record<string, string> = {
   king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: 'P',
 };
@@ -35,21 +34,23 @@ const SELECTED_COLOR = 'rgba(220,179,92,0.55)';
 const VALID_MOVE_COLOR = 'rgba(76,175,80,0.5)';
 const LAST_MOVE_COLOR = 'rgba(155,199,0,0.41)';
 
-/** 预加载棋子 SVG 图片 */
-function loadPieceImages(): Record<string, HTMLImageElement> {
-  const imgs: Record<string, HTMLImageElement> = {};
+// ── 模块级预加载 SVG（组件挂载前就开始加载） ──
+const pieceImages: Record<string, HTMLImageElement> = {};
+const imagesReadyPromise: Promise<void> = (() => {
   const colors = ['w', 'b'];
   const types = ['K', 'Q', 'R', 'B', 'N', 'P'];
+  const promises: Promise<void>[] = [];
   for (const c of colors) {
     for (const t of types) {
       const key = `${c}${t}`;
       const img = new Image();
       img.src = `/pieces/${key}.svg`;
-      imgs[key] = img;
+      pieceImages[key] = img;
+      promises.push(new Promise(resolve => { img.onload = () => resolve(); img.onerror = () => resolve(); }));
     }
   }
-  return imgs;
-}
+  return Promise.all(promises).then(() => {});
+})();
 
 export default function ChessBoard({
   board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, onSelect,
@@ -57,17 +58,11 @@ export default function ChessBoard({
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hoverPos, setHoverPos] = useState<{ row: number; col: number } | null>(null);
-  const imagesRef = useRef<Record<string, HTMLImageElement>>({});
 
-  // 懒加载图片
-  useEffect(() => {
-    imagesRef.current = loadPieceImages();
-  }, []);
-
-  const padding = 30;
+  const padding = 12;
   const cellSize = Math.min(
-    (width - padding * 2) / (COLS - 1),
-    (height - padding * 2) / (ROWS - 1),
+    (width - padding * 2) / ROWS,
+    (height - padding * 2) / COLS,
   );
   const boardPx = cellSize * (COLS - 1);
   const offsetX = (width - boardPx) / 2;
@@ -155,30 +150,40 @@ export default function ChessBoard({
       }
     }
 
-    // ── 棋子（SVG 图片） ──
-    const imgs = imagesRef.current;
+    // ── 坐标标注（格子内，小字不占空间） ──
+    ctx.font = `bold ${cellSize * 0.16}px sans-serif`;
+    const bottomRow = transformRow(7);
+    ctx.textBaseline = 'bottom';
+    for (let c = 0; c < COLS; c++) {
+      const { x, y } = toCanvas(bottomRow, c);
+      const file = String.fromCharCode(97 + (myColor === 'black' ? 7 - c : c));
+      const isLight = (bottomRow + c) % 2 === 0;
+      ctx.fillStyle = isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)';
+      ctx.textAlign = 'left';
+      ctx.fillText(file, x - cellSize * 0.44, y + cellSize * 0.46);
+    }
+    const rightCol = transformCol(7);
+    ctx.textBaseline = 'top';
+    for (let r = 0; r < ROWS; r++) {
+      const { x, y } = toCanvas(r, rightCol);
+      const rank = myColor === 'black' ? r + 1 : ROWS - r;
+      const isLight = (r + rightCol) % 2 === 0;
+      ctx.fillStyle = isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)';
+      ctx.textAlign = 'right';
+      ctx.fillText(String(rank), x + cellSize * 0.44, y - cellSize * 0.46);
+    }
+
+    // ── 棋子（SVG 图片，直接从模块级变量读取） ──
     for (let r = 0; r < ROWS; r++) {
       for (let c = 0; c < COLS; c++) {
         const piece = parsePiece(board[r]?.[c]);
         if (!piece) continue;
         const { x, y } = toCanvas(r, c);
         const fileKey = `${piece.color === 'white' ? 'w' : 'b'}${PIECE_FILE[piece.type] || ''}`;
-        const img = imgs[fileKey];
+        const img = pieceImages[fileKey];
         if (img && img.complete) {
           const sz = cellSize * 0.88;
           ctx.drawImage(img, x - sz / 2, y - sz / 2, sz, sz);
-        } else {
-          // 图片未加载完成时 fallback 显示 Unicode
-          ctx.fillStyle = piece.color === 'white' ? '#fff' : '#000';
-          ctx.font = `${cellSize * 0.72}px serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const fallback: Record<string, Record<string, string>> = {
-            king: { white: '♔', black: '♚' }, queen: { white: '♕', black: '♛' },
-            rook: { white: '♖', black: '♜' }, bishop: { white: '♗', black: '♝' },
-            knight: { white: '♘', black: '♞' }, pawn: { white: '♙', black: '♟' },
-          };
-          ctx.fillText(fallback[piece.type]?.[piece.color] || '?', x, y);
         }
       }
     }
@@ -190,6 +195,11 @@ export default function ChessBoard({
       ctx.fillRect(x - cellSize / 2, y - cellSize / 2, cellSize, cellSize);
     }
   }, [board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, cellSize, offsetX, offsetY, width, height, hoverPos, toCanvas]);
+
+  // SVG 加载完成后重新绘制
+  useEffect(() => {
+    imagesReadyPromise.then(() => draw());
+  }, [draw]);
 
   useEffect(() => { draw(); }, [draw]);
 

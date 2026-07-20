@@ -94,6 +94,44 @@ export default function ChessRoomPage() {
     return () => observer.disconnect();
   }, []);
 
+  // ── 棋钟 ──
+  const [clockTick, setClockTick] = useState(0);
+  const moveStartRef = useRef(Date.now());
+  const lastMoveTimeRef = useRef(0);
+  const prevTurnForClockRef = useRef<string | null>(null);
+  const currentTurn = gameState?.currentTurn;
+  if (currentTurn && currentTurn !== prevTurnForClockRef.current) {
+    if (prevTurnForClockRef.current !== null) {
+      lastMoveTimeRef.current = Date.now() - moveStartRef.current;
+    }
+    moveStartRef.current = Date.now();
+    prevTurnForClockRef.current = currentTurn;
+  }
+  // 每秒刷新棋钟显示
+  useEffect(() => {
+    if (!gameState?.clock || gameState.phase !== 'playing') return;
+    const timer = setInterval(() => setClockTick(t => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [gameState?.clock, gameState?.phase]);
+  // 新对局开始时重置棋钟和评估数据
+  useEffect(() => {
+    if (gameState?.phase === 'playing') {
+      moveStartRef.current = Date.now();
+      lastMoveTimeRef.current = 0;
+      prevTurnForClockRef.current = null;
+      setClockTick(0);
+      setFairyEval(null);
+      setFairyDepth(null);
+      setFairyPv(null);
+    }
+  }, [gameState?.phase]);
+  const clock = gameState?.clock;
+  const formatTime = (ms: number) => {
+    if (!ms || ms < 0) return '00:00';
+    const sec = Math.floor(ms / 1000);
+    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  };
+
   const [rematchTimer, setRematchTimer] = useState(60);
   const [challengeCountdown, setChallengeCountdown] = useState(60);
 
@@ -168,6 +206,17 @@ export default function ChessRoomPage() {
   }, [gameState?.phase]);
 
   const displayResult = gameResult || lastResultRef.current;
+
+  // Fairy-Stockfish 评估数据
+  useEffect(() => {
+    const unsub = wsClient.on('fairy_eval', (p: any) => {
+      setFairyEval(p.score ?? null);
+      setFairyDepth(p.depth ?? null);
+      setFairyPv(p.pv ?? null);
+    });
+    return unsub;
+  }, []);
+
   const winnerText = getGameResultText({
     winner: displayResult?.winner,
     loser: (displayResult as any)?.loser,
@@ -177,6 +226,9 @@ export default function ChessRoomPage() {
   });
 
   const [showConfetti, setShowConfetti] = useState(false);
+  const [fairyEval, setFairyEval] = useState<number | null>(null);
+  const [fairyDepth, setFairyDepth] = useState<number | null>(null);
+  const [fairyPv, setFairyPv] = useState<string | null>(null);
 
   // AI 对局终局弹窗延迟 3 秒
   const [showGameOver, setShowGameOver] = useState(false);
@@ -288,7 +340,93 @@ export default function ChessRoomPage() {
             </div>
           )}
           {gameState && gameState.phase === 'playing' && room?.players?.some((p: any) => p.id === myId) && (
-            <button className="btn-sidebar btn-resign" onClick={resign}>🏳️ 认输</button>
+            <>
+              {/* 棋钟 */}
+              {clock && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 8,
+                    background: gameState.currentTurn === 'white' ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: gameState.currentTurn === 'white' ? '1px solid rgba(76,175,80,0.3)' : '1px solid transparent',
+                  }}>
+                    <span style={{ fontSize: 14 }}>⚪</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', minWidth: 30 }}>
+                      {room?.players?.find((p: any) => p.color === 'white')?.id === myId ? '你' : '对手'}
+                    </span>
+                    <span style={{
+                      fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flex: 1,
+                      color: gameState.currentTurn === 'white' ? '#4caf50' : '#aaa',
+                    }}>
+                      {gameState.currentTurn === 'white'
+                        ? formatTime(Date.now() - moveStartRef.current)
+                        : formatTime(lastMoveTimeRef.current)}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatTime(clock.white.totalTime + (gameState.currentTurn === 'white' ? Date.now() - moveStartRef.current : 0))}
+                    </span>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 8,
+                    background: gameState.currentTurn === 'black' ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: gameState.currentTurn === 'black' ? '1px solid rgba(76,175,80,0.3)' : '1px solid transparent',
+                  }}>
+                    <span style={{ fontSize: 14 }}>⚫</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', minWidth: 30 }}>
+                      {room?.players?.find((p: any) => p.color === 'black')?.id === myId ? '你' : '对手'}
+                    </span>
+                    <span style={{
+                      fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flex: 1,
+                      color: gameState.currentTurn === 'black' ? '#4caf50' : '#aaa',
+                    }}>
+                      {gameState.currentTurn === 'black'
+                        ? formatTime(Date.now() - moveStartRef.current)
+                        : formatTime(lastMoveTimeRef.current)}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatTime(clock.black.totalTime + (gameState.currentTurn === 'black' ? Date.now() - moveStartRef.current : 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {/* Fairy-Stockfish 实时胜率条 */}
+              {room?.players?.some(p => p.id.startsWith('ai-fairy')) && fairyEval !== null && (
+                <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 8, background: '#018B8D' }}>
+                  {/* 胜率条 */}
+                  {(() => {
+                    // centipawn → 白方胜率（%）
+                    const wr = 100 / (1 + Math.pow(10, -fairyEval / 4));
+                    const blackPct = Math.max(2, Math.min(98, 100 - wr));
+                    const whitePct = Math.max(2, Math.min(98, wr));
+                    return (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 18 }}>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚫</span>
+                          <div style={{ flex: 1, height: 10, borderRadius: 5, overflow: 'hidden', display: 'flex', background: '#018B8D' }}>
+                            <div style={{ width: `${blackPct}%`, background: '#000', transition: 'width 0.3s' }} />
+                            <div style={{ width: `${whitePct}%`, background: '#fff', transition: 'width 0.3s' }} />
+                          </div>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚪</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                          <span>{blackPct.toFixed(0)}%</span>
+                          <span>{whitePct.toFixed(0)}%</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              {/* 下一步预测（PV） */}
+              {room?.players?.some(p => p.id.startsWith('ai-fairy')) && fairyPv && (
+                <div style={{ marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                  <div style={{ marginBottom: 2 }}>下一步预测 {fairyDepth ? `(深度 ${fairyDepth})` : ''}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+                    {fairyPv.replace(/(\w{2})(\w{2})/g, '$1-$2')}
+                  </div>
+                </div>
+              )}
+              <button className="btn-sidebar btn-resign" onClick={resign}>🏳️ 认输</button>
+            </>
           )}
         </div>
       </aside>

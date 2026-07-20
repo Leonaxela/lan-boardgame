@@ -50,6 +50,7 @@ export function useRoom() {
   const [challengeChallenger, setChallengeChallenger] = useState('');
   const [myColor, setMyColor] = useState<string | null>(null);
   const myIdRef = useRef<string | null>(null);
+  const aiSoundTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [rematchState, setRematchState] = useState<string | null>(null);
 
@@ -148,7 +149,13 @@ export function useRoom() {
 
     unsubs.push(wsClient.on('game_state', (p) => {
       setGameState(p.gameState);
-      if (p.movedBy === 'ai') playMoveSound();
+      if (p.movedBy === 'ai') {
+        // 防抖：50ms 内只播一次
+        if (!aiSoundTimerRef.current) {
+          aiSoundTimerRef.current = setTimeout(() => { aiSoundTimerRef.current = null; }, 50);
+          playMoveSound();
+        }
+      }
     }));
 
     // 申请终局数子
