@@ -169,6 +169,7 @@ export class FairyStockfishManager {
     const initResponse = await this.sendCommand(roomId, initCmd, 30000);
     console.log(`[Fairy-Stockfish] ${initCmd} 响应: ${initResponse.substring(0, 100)}`);
 
+
     // 设置变体
     if (isUcci) {
       this.sendSilentCommand(roomId, 'setoption name UCCI_Variant value xiangqi');
@@ -203,7 +204,6 @@ export class FairyStockfishManager {
       };
 
       session.process.stdin?.write(command + '\n');
-      console.log(`[Fairy-Stockfish stdin] ${command}`);
     });
   }
 
@@ -212,7 +212,6 @@ export class FairyStockfishManager {
     const session = this.sessions.get(roomId);
     if (!session) return;
     session.process.stdin?.write(command + '\n');
-    console.log(`[Fairy-Stockfish stdin] ${command}`);
   }
 
   /** 处理 stdout */
@@ -369,9 +368,7 @@ export class FairyStockfishManager {
   destroySession(roomId: string): void {
     const session = this.sessions.get(roomId);
     if (!session) return;
-
-    console.log(`[Fairy-Stockfish] 销毁会话 roomId=${roomId}`);
-
+      console.log(`[Fairy-Stockfish] 销毁会话 roomId=${roomId}`);
     if (session.timeoutTimer) {
       clearTimeout(session.timeoutTimer);
     }

@@ -431,7 +431,7 @@ export default function ChessRoomPage() {
         </div>
       </aside>
 
-      <main className="room-board" ref={boardContainerRef}>
+      <main className="room-board" ref={boardContainerRef} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         {!gameState ? (
           <div style={{ textAlign: 'center' }}>
             <ChessBoard
@@ -445,28 +445,46 @@ export default function ChessRoomPage() {
           </div>
         ) : (
           <>
-            <ChessBoard
-              board={gameState.board}
-              selectedPos={selectedPos}
-              validMoves={validMoves}
-              lastMoveFrom={gameState.extra?.lastMoveFrom || null}
-              lastMoveTo={gameState.lastMove || null}
-              myColor={myColor}
-              isMyTurn={isMyTurn}
-              onSelect={handleSelect}
-              width={boardPx.w}
-              height={boardPx.h}
-            />
-            <div className="board-status">
-              {gameState.phase === 'playing' ? (
-                isMyTurn ? <span className="turn-indicator">你的回合 ({gameState?.currentTurn === 'white' ? '⚪白方' : '⚫黑方'})</span>
-                  : <span className="text-muted">等待对手...</span>
-              ) : gameState.phase === 'finished' ? (
-                <span className="game-over-label">对局结束 — {winnerText}</span>
-              ) : null}
-              {gameState.extra?.inCheck && gameState.phase === 'playing' && (
-                <span style={{ color: '#f44336', fontWeight: 700, marginLeft: 12 }}>⚠️ 将军！</span>
-              )}
+            {/* 被吃白棋（左侧） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignContent: 'flex-start', paddingTop: 4, width: boardPx.h * 0.22 }}>
+              {(gameState.extra?.captured as string[] || []).filter((p: string) => p.startsWith('white_')).reverse().map((p: string, i: number) => {
+                const type = p.replace('white_', '');
+                const fileKey = `w${type === 'knight' ? 'N' : type[0].toUpperCase()}`;
+                return <img key={i} src={`/pieces/${fileKey}.svg`} style={{ width: boardPx.h * 0.1, height: boardPx.h * 0.1, opacity: 0.65 }} />;
+              })}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <ChessBoard
+                board={gameState.board}
+                selectedPos={selectedPos}
+                validMoves={validMoves}
+                lastMoveFrom={gameState.extra?.lastMoveFrom || null}
+                lastMoveTo={gameState.lastMove || null}
+                myColor={myColor}
+                isMyTurn={isMyTurn}
+                onSelect={handleSelect}
+                width={boardPx.w}
+                height={boardPx.h}
+              />
+              <div className="board-status">
+                {gameState.phase === 'playing' ? (
+                  isMyTurn ? <span className="turn-indicator">你的回合 ({gameState?.currentTurn === 'white' ? '⚪白方' : '⚫黑方'})</span>
+                    : <span className="text-muted">等待对手...</span>
+                ) : gameState.phase === 'finished' ? (
+                  <span className="game-over-label">对局结束 — {winnerText}</span>
+                ) : null}
+                {gameState.extra?.inCheck && gameState.phase === 'playing' && (
+                  <span style={{ color: '#f44336', fontWeight: 700, marginLeft: 12 }}>⚠️ 将军！</span>
+                )}
+              </div>
+            </div>
+            {/* 被吃黑棋（右侧） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignContent: 'flex-start', paddingTop: 4, width: boardPx.h * 0.22 }}>
+              {(gameState.extra?.captured as string[] || []).filter((p: string) => p.startsWith('black_')).reverse().map((p: string, i: number) => {
+                const type = p.replace('black_', '');
+                const fileKey = `b${type === 'knight' ? 'N' : type[0].toUpperCase()}`;
+                return <img key={i} src={`/pieces/${fileKey}.svg`} style={{ width: boardPx.h * 0.1, height: boardPx.h * 0.1, opacity: 0.85 }} />;
+              })}
             </div>
           </>
         )}

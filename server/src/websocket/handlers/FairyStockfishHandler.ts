@@ -67,7 +67,7 @@ export function scheduleFairyStockfishMove(room: Room): void {
           try {
             await fairyStockfishManager.quickEval(room.roomId);
             const rawScore = fairyStockfishManager.getLastScore(room.roomId);
-            const score = rawScore !== null ? (aiPlayer.color === 'black' ? -rawScore : rawScore) : null;
+            const score = rawScore !== null ? (aiPlayer.color === 'white' ? -rawScore : rawScore) : null;
             const depth = fairyStockfishManager.getLastDepth(room.roomId);
             const pv = fairyStockfishManager.getLastPv(room.roomId);
             // 只要有 PV 或 score 就发送

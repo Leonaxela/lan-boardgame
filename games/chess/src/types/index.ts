@@ -91,6 +91,8 @@ export interface IntlExtraState {
   enPassantTarget: { row: number; col: number } | null;
   inCheck: boolean;
   halfMoveClock: number;
+  /** 被吃掉的棋子 */
+  captured: string[];
 }
 
 export function getIntlExtra(extra: Record<string, unknown>): IntlExtraState {
@@ -102,6 +104,7 @@ export function getIntlExtra(extra: Record<string, unknown>): IntlExtraState {
     enPassantTarget: (extra.enPassantTarget as { row: number; col: number } | null) ?? null,
     inCheck: (extra.inCheck as boolean) ?? false,
     halfMoveClock: (extra.halfMoveClock as number) ?? 0,
+    captured: (extra.captured as string[]) ?? [],
   };
 }
 

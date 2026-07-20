@@ -35,7 +35,6 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
 
     const engine = getEngine(room.gameType, room.config);
     const pos = msg.payload.position as { row: number; col: number };
-    console.log('[place] pos:', pos, 'board size:', room.gameState?.board?.length);
 
     if (room.gameType === GameType.ChineseChess || room.gameType === GameType.Chess || room.gameType === GameType.Draughts) {
       const from = msg.payload.from as { row: number; col: number } | undefined;

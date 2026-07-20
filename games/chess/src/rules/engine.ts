@@ -134,6 +134,8 @@ export class ChessEngine implements IGameEngine {
     const piece = board[fromPos.row][fromPos.col]!;
     const captured = board[move.row][move.col];
     const extra = getIntlExtra(state.extra);
+    const newCaptured = [...(extra.captured || [])];
+    if (captured) newCaptured.push(captured);
     const color = playerColor as IntlColor;
     const type = intlPieceType(piece);
 
@@ -158,6 +160,8 @@ export class ChessEngine implements IGameEngine {
     if (type === INTL_PIECES.PAWN && extra.enPassantTarget &&
         move.row === extra.enPassantTarget.row && move.col === extra.enPassantTarget.col) {
       const capturedRow = color === 'white' ? move.row + 1 : move.row - 1;
+      const epPiece = board[capturedRow][move.col];
+      if (epPiece) newCaptured.push(epPiece);
       board[capturedRow][move.col] = null;
     }
 
@@ -216,6 +220,7 @@ export class ChessEngine implements IGameEngine {
         halfMoveClock,
         from: null,
         lastMoveFrom: fromPos,
+        captured: newCaptured,
       } as unknown as Record<string, unknown>,
     };
   }
