@@ -9,6 +9,7 @@ interface Props {
   lastMoveTo?: { row: number; col: number } | null;
   myColor: string | null;
   isMyTurn: boolean;
+  inCheck?: boolean;
   onSelect: (row: number, col: number) => void;
   width?: number;
   height?: number;
@@ -53,7 +54,7 @@ const imagesReadyPromise: Promise<void> = (() => {
 })();
 
 export default function ChessBoard({
-  board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, onSelect,
+  board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, inCheck, onSelect,
   width = 560, height = 560,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -132,6 +133,27 @@ export default function ChessBoard({
       ctx.fillRect(x - cellSize / 2, y - cellSize / 2, cellSize, cellSize);
     }
 
+    // ── 王被将军红色光晕（当前被将军方的王） ──
+    if (inCheck) {
+      const checkedColor = isMyTurn ? (myColor ?? 'white') : (myColor === 'white' ? 'black' : 'white');
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const piece = parsePiece(board[r]?.[c]);
+          if (piece && piece.type === 'king' && piece.color === checkedColor) {
+            const { x, y } = toCanvas(r, c);
+            ctx.shadowColor = 'rgba(255,50,50,0.8)';
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = 'rgba(255,50,50,0.35)';
+            ctx.beginPath();
+            ctx.arc(x, y, cellSize * 0.48, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+          }
+        }
+      }
+    }
+
     // ── 合法走法提示点 ──
     for (const move of validMoves) {
       const { x, y } = toCanvas(move.row, move.col);
@@ -194,7 +216,7 @@ export default function ChessBoard({
       ctx.fillStyle = 'rgba(0,0,0,0.08)';
       ctx.fillRect(x - cellSize / 2, y - cellSize / 2, cellSize, cellSize);
     }
-  }, [board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, cellSize, offsetX, offsetY, width, height, hoverPos, toCanvas]);
+  }, [board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, inCheck, cellSize, offsetX, offsetY, width, height, hoverPos, toCanvas]);
 
   // SVG 加载完成后重新绘制
   useEffect(() => {

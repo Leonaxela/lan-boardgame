@@ -14,6 +14,7 @@ interface Props {
   lastMoveTo?: { row: number; col: number } | null;
   myColor: string | null;
   isMyTurn: boolean;
+  inCheck?: boolean;
   onSelect: (row: number, col: number) => void;
   width?: number;
   height?: number;
@@ -40,7 +41,7 @@ function parsePiece(s: string | null): Piece | null {
 }
 
 export default function ChineseChessBoard({
-  board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, onSelect,
+  board, selectedPos, validMoves, lastMoveFrom, lastMoveTo, myColor, isMyTurn, inCheck, onSelect,
   width = 540, height = 600,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -183,6 +184,31 @@ export default function ChineseChessBoard({
       ctx.fillText(String(displayRow), padX - cellW * 0.45, padY + r * cellH);
     }
 
+    // ── 将/帅被将军红色光晕 ──
+    if (inCheck) {
+      const checkedColor = isMyTurn ? (myColor ?? 'red') : (myColor === 'red' ? 'black' : 'red');
+      for (let r = 0; r < ROWS; r++) {
+        for (let c = 0; c < COLS; c++) {
+          const cell = board[r]?.[c];
+          if (!cell) continue;
+          const color = cell.startsWith('red_') ? 'red' : 'black';
+          const type = cell.replace('red_', '').replace('black_', '');
+          if (type === 'king' && color === checkedColor) {
+            const { x, y } = toCanvas(r, c);
+            // 画在棋子下层，但半径大于棋子，红色光晕从棋子边缘透出
+            ctx.shadowColor = 'rgba(255,50,50,0.9)';
+            ctx.shadowBlur = 35;
+            ctx.fillStyle = 'rgba(255,50,50,0.25)';
+            ctx.beginPath();
+            ctx.arc(x, y, pieceR + 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            break;
+          }
+        }
+      }
+    }
+
     // ── 选中高亮：虚线圆 ──
     if (selectedPos) {
       const { x, y } = toCanvas(selectedPos.row, selectedPos.col);
@@ -265,7 +291,7 @@ export default function ChineseChessBoard({
         ctx.fillText(name, x, y + 1);
       }
     }
-  }, [board, selectedPos, validMoves, width, height, cellW, cellH, pieceR, toCanvas]);
+  }, [board, selectedPos, validMoves, width, height, cellW, cellH, pieceR, toCanvas, inCheck]);
 
   useEffect(() => { draw(); }, [draw]);
 

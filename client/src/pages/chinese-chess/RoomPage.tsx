@@ -516,6 +516,7 @@ export default function ChineseChessRoomPage() {
                 lastMoveTo={gameState.lastMove || null}
                 myColor={myColor}
                 isMyTurn={isMyTurn}
+                inCheck={gameState.extra?.inCheck as boolean}
                 onSelect={handleSelect}
                 width={boardPx.w}
                 height={boardPx.h}
