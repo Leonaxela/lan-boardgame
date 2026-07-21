@@ -421,11 +421,27 @@ export default function ChessRoomPage() {
                 <div style={{ marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
                   <div style={{ marginBottom: 2 }}>下一步预测 {fairyDepth ? `(深度 ${fairyDepth})` : ''}</div>
                   <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
-                    {fairyPv.replace(/(\w{2})(\w{2})/g, '$1-$2')}
+                    {(() => {
+                      const flip = myColor === 'black';
+                      return fairyPv.split(' ').map(move => {
+                        if (move.length < 4) return move;
+                        const flipCoord = (s: string) => {
+                          const col = s.charCodeAt(0) - 97;
+                          const row = parseInt(s[1], 10) - 1;
+                          const fc = flip ? 7 - col : col;
+                          const fr = flip ? 7 - row : row;
+                          return String.fromCharCode(97 + fc) + (fr + 1);
+                        };
+                        return flipCoord(move.slice(0,2)) + '-' + flipCoord(move.slice(2,4));
+                      }).join(' ');
+                    })()}
                   </div>
                 </div>
               )}
-              <button className="btn-sidebar btn-resign" onClick={resign}>🏳️ 认输</button>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn-sidebar" style={{ flex: 1 }} onClick={resign}>🏳️ 认输</button>
+                <button className="btn-sidebar" style={{ flex: 1 }} onClick={() => wsClient.send('undo_move', {})}>↩ 悔棋</button>
+              </div>
             </>
           )}
         </div>
@@ -479,7 +495,7 @@ export default function ChessRoomPage() {
               </div>
             </div>
             {/* 被吃黑棋（右侧） */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignContent: 'flex-start', paddingTop: 4, width: boardPx.h * 0.22 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'flex-end', alignContent: 'flex-start', paddingTop: 4, width: boardPx.h * 0.22 }}>
               {(gameState.extra?.captured as string[] || []).filter((p: string) => p.startsWith('black_')).reverse().map((p: string, i: number) => {
                 const type = p.replace('black_', '');
                 const fileKey = `b${type === 'knight' ? 'N' : type[0].toUpperCase()}`;

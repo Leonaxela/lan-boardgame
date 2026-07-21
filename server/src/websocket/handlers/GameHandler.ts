@@ -62,6 +62,9 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
     }
     room.moveHistory.push(moveRecord);
 
+    // 保存快照供悔棋
+    room.stateHistory.push(JSON.parse(JSON.stringify(room.gameState)));
+
     room.gameState = engine.applyMove(room.gameState, pos, player.color);
     updateClock(room, player.color);
 
@@ -287,5 +290,28 @@ export function registerGameHandlers(ctx: DispatcherContext, handlers: Map<strin
         });
       }
     }
+  });
+
+  handlers.set('undo_move', (ws: WebSocket, _msg: ClientMessage, player: RoomPlayer, room: Room) => {
+    if (!room.gameState || room.gameState.phase !== GamePhase.Playing) return;
+    if (!room.fairyStockfishGame) {
+      sendError(ws, 'NOT_SUPPORTED', '目前仅支持 AI 对局悔棋');
+      return;
+    }
+    if (room.stateHistory.length < 1) {
+      sendError(ws, 'NO_MOVES', '无法悔棋');
+      return;
+    }
+    // 恢复快照（stateHistory 每步 = 一步 human 走棋 + AI 回应）
+    const restored = room.stateHistory.pop()!;
+    room.gameState = JSON.parse(JSON.stringify(restored));
+    // 同步 moveHistory（移除 human 最后一步 + AI 回应）
+    room.moveHistory.splice(room.moveHistory.length - 2);
+    // 同步 Fairy-Stockfish 引擎（移除 2 步）
+    try { fairyStockfishManager.undoMove(room.roomId, 2); } catch {}
+    room.broadcast({
+      type: 'game_state',
+      payload: { gameState: room.gameState },
+    });
   });
 }

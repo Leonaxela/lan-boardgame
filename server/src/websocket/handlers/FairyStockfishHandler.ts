@@ -62,7 +62,7 @@ export function scheduleFairyStockfishMove(room: Room): void {
           payload: { result, gameState: room.gameState, isAiGame: true },
         });
       } else {
-        // AI 落子后，用新局面做一次快速评估（50ms），获取真正的"下一步预测"
+        // AI 落子后，用新局面做一次快速评估（1s），获取真正的"下一步预测"
         const doEval = async () => {
           try {
             await fairyStockfishManager.quickEval(room.roomId);
@@ -70,12 +70,10 @@ export function scheduleFairyStockfishMove(room: Room): void {
             const score = rawScore !== null ? (aiPlayer.color === 'white' ? -rawScore : rawScore) : null;
             const depth = fairyStockfishManager.getLastDepth(room.roomId);
             const pv = fairyStockfishManager.getLastPv(room.roomId);
-            // 只要有 PV 或 score 就发送
-            if (score !== null || pv !== null) {
-              for (const p of room.players) {
-                if (p.ws && p.ws.readyState === WebSocket.OPEN && !p.id.startsWith('ai-')) {
-                  p.ws.send(JSON.stringify({ type: 'fairy_eval', payload: { score, depth, pv } }));
-                }
+            // 每次评估都发送，清空客户端旧值
+            for (const p of room.players) {
+              if (p.ws && p.ws.readyState === WebSocket.OPEN && !p.id.startsWith('ai-')) {
+                p.ws.send(JSON.stringify({ type: 'fairy_eval', payload: { score, depth, pv } }));
               }
             }
           } catch {}
@@ -138,6 +136,7 @@ export function registerFairyStockfishHandlers(ctx: DispatcherContext, handlers:
         room.gameState = {
           ...room.gameState,
           clock: {
+            red: { moveTime: 0, totalTime: 0 },
             black: { moveTime: 0, totalTime: 0 },
             white: { moveTime: 0, totalTime: 0 },
             lastMoveAt: room.gameStartedAt,

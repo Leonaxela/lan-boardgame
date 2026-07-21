@@ -46,12 +46,13 @@ export function updateClock(room: Room, playerColor: string): void {
   room.gameState = {
     ...room.gameState,
     clock: {
+      red: { moveTime: playerColor === 'red' ? elapsed : (prevClock ? (prevClock as any).red?.moveTime || 0 : 0), totalTime: playerColor === 'red' ? whiteTotal : (prevClock ? (prevClock as any).red?.totalTime || 0 : 0) },
       black: { moveTime: playerColor === 'black' ? elapsed : (prevClock?.black.moveTime || 0), totalTime: blackTotal },
       white: { moveTime: playerColor === 'white' || playerColor === 'red' ? elapsed : (prevClock?.white.moveTime || 0), totalTime: whiteTotal },
       lastMoveAt: now,
       blackTurnAt: playerColor === 'black' ? (prevClock?.blackTurnAt || now) : now,
       whiteTurnAt: playerColor === 'white' || playerColor === 'red' ? (prevClock?.whiteTurnAt || now) : now,
-    },
+    } as any,
   };
 }
 

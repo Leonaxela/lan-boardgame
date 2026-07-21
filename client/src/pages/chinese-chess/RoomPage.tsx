@@ -97,6 +97,57 @@ export default function ChineseChessRoomPage() {
     return () => observer.disconnect();
   }, []);
 
+  // ── 棋钟 ──
+  const [clockTick, setClockTick] = useState(0);
+  const moveStartRef = useRef(Date.now());
+  const lastMoveTimeRef = useRef(0);
+  const prevTurnForClockRef = useRef<string | null>(null);
+  const currentTurn = gameState?.currentTurn;
+  if (currentTurn && currentTurn !== prevTurnForClockRef.current) {
+    if (prevTurnForClockRef.current !== null) {
+      lastMoveTimeRef.current = Date.now() - moveStartRef.current;
+    }
+    moveStartRef.current = Date.now();
+    prevTurnForClockRef.current = currentTurn;
+  }
+  // 每秒刷新棋钟
+  useEffect(() => {
+    if (!gameState?.clock || gameState.phase !== 'playing') return;
+    const timer = setInterval(() => setClockTick(t => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, [gameState?.clock, gameState?.phase]);
+  // 新对局重置棋钟和评估
+  useEffect(() => {
+    if (gameState?.phase === 'playing') {
+      moveStartRef.current = Date.now();
+      lastMoveTimeRef.current = 0;
+      prevTurnForClockRef.current = null;
+      setClockTick(0);
+      setFairyEval(null);
+      setFairyDepth(null);
+      setFairyPv(null);
+    }
+  }, [gameState?.phase]);
+  const clock = gameState?.clock;
+  const formatTime = (ms: number) => {
+    if (!ms || ms < 0) return '00:00';
+    const sec = Math.floor(ms / 1000);
+    return `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+  };
+
+  // ── Fairy-Stockfish 评估 ──
+  const [fairyEval, setFairyEval] = useState<number | null>(null);
+  const [fairyDepth, setFairyDepth] = useState<number | null>(null);
+  const [fairyPv, setFairyPv] = useState<string | null>(null);
+  useEffect(() => {
+    const unsub = wsClient.on('fairy_eval', (p: any) => {
+      setFairyEval(p.score ?? null);
+      setFairyDepth(p.depth ?? null);
+      setFairyPv(p.pv ?? null);
+    });
+    return unsub;
+  }, []);
+
   const [rematchTimer, setRematchTimer] = useState(60);
   const [challengeCountdown, setChallengeCountdown] = useState(60);
 
@@ -324,12 +375,112 @@ export default function ChineseChessRoomPage() {
             </div>
           )}
           {gameState && gameState.phase === 'playing' && room?.players?.some((p: any) => p.id === myId) && (
-            <button className="btn-sidebar btn-resign" onClick={resign}>🏳️ 认输</button>
+            <>
+              {/* 棋钟 */}
+              {clock && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 8 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 8,
+                    background: gameState.currentTurn === 'red' ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: gameState.currentTurn === 'red' ? '1px solid rgba(76,175,80,0.3)' : '1px solid transparent',
+                  }}>
+                    <span style={{ fontSize: 14 }}>🔴</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', minWidth: 30 }}>
+                      {room?.players?.find((p: any) => p.color === 'red')?.id === myId ? '你' : '对手'}
+                    </span>
+                    <span style={{
+                      fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flex: 1,
+                      color: gameState.currentTurn === 'red' ? '#4caf50' : '#aaa',
+                    }}>
+                      {gameState.currentTurn === 'red'
+                        ? formatTime(Date.now() - moveStartRef.current)
+                        : formatTime(lastMoveTimeRef.current)}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatTime(clock.red?.totalTime + (gameState.currentTurn === 'red' ? Date.now() - moveStartRef.current : 0))}
+                    </span>
+                  </div>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 8,
+                    background: gameState.currentTurn === 'black' ? 'rgba(76,175,80,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: gameState.currentTurn === 'black' ? '1px solid rgba(76,175,80,0.3)' : '1px solid transparent',
+                  }}>
+                    <span style={{ fontSize: 14 }}>⚫</span>
+                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', minWidth: 30 }}>
+                      {room?.players?.find((p: any) => p.color === 'black')?.id === myId ? '你' : '对手'}
+                    </span>
+                    <span style={{
+                      fontSize: 15, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flex: 1,
+                      color: gameState.currentTurn === 'black' ? '#4caf50' : '#aaa',
+                    }}>
+                      {gameState.currentTurn === 'black'
+                        ? formatTime(Date.now() - moveStartRef.current)
+                        : formatTime(lastMoveTimeRef.current)}
+                    </span>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>
+                      {formatTime(clock.black.totalTime + (gameState.currentTurn === 'black' ? Date.now() - moveStartRef.current : 0))}
+                    </span>
+                  </div>
+                </div>
+              )}
+              {/* Fairy-Stockfish 胜率条 */}
+              {room?.players?.some(p => p.id.startsWith('ai-fairy')) && fairyEval !== null && (
+                <div style={{ marginBottom: 8, padding: '8px 10px', borderRadius: 8, background: '#018B8D' }}>
+                  {(() => {
+                    const wr = 100 / (1 + Math.pow(10, -fairyEval / 4));
+                    const blackPct = Math.max(2, Math.min(98, 100 - wr));
+                    const whitePct = Math.max(2, Math.min(98, wr));
+                    return (
+                      <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, height: 18 }}>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>⚫</span>
+                          <div style={{ flex: 1, height: 10, borderRadius: 5, overflow: 'hidden', display: 'flex', background: '#018B8D' }}>
+                            <div style={{ width: `${blackPct}%`, background: '#000', transition: 'width 0.3s' }} />
+                            <div style={{ width: `${whitePct}%`, background: '#fff', transition: 'width 0.3s' }} />
+                          </div>
+                          <span style={{ fontSize: 16, lineHeight: 1 }}>🔴</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                          <span>{blackPct.toFixed(0)}%</span>
+                          <span>{whitePct.toFixed(0)}%</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              {/* 下一步预测 */}
+              {room?.players?.some(p => p.id.startsWith('ai-fairy')) && fairyPv && (
+                <div style={{ marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                  <div style={{ marginBottom: 2 }}>下一步预测 {fairyDepth ? `(深度 ${fairyDepth})` : ''}</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5 }}>
+                    {(() => {
+                      const flip = myColor === 'black';
+                      return fairyPv.split(' ').map((move: string) => {
+                        if (move.length < 4) return move;
+                        const flipCoord = (s: string) => {
+                          const col = s.charCodeAt(0) - 97;
+                          const row = parseInt(s[1], 10);
+                          const fc = flip ? 8 - col : col;
+                          const fr = flip ? 9 - row : row;
+                          return String.fromCharCode(97 + fc) + fr;
+                        };
+                        return flipCoord(move.slice(0,2)) + '-' + flipCoord(move.slice(2,4));
+                      }).join(' ');
+                    })()}
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button className="btn-sidebar" style={{ flex: 1 }} onClick={resign}>🏳️ 认输</button>
+                <button className="btn-sidebar" style={{ flex: 1 }} onClick={() => wsClient.send('undo_move', {})}>↩ 悔棋</button>
+              </div>
+            </>
           )}
         </div>
       </aside>
 
-      <main className="room-board" ref={boardContainerRef}>
+      <main className="room-board" ref={boardContainerRef} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         {!gameState ? (
           <div style={{ textAlign: 'center' }}>
             <ChineseChessBoard
@@ -348,28 +499,46 @@ export default function ChineseChessRoomPage() {
           </div>
         ) : (
           <>
-            <ChineseChessBoard
-              board={gameState.board}
-              selectedPos={selectedPos}
-              validMoves={validMoves}
-              lastMoveFrom={gameState.extra?.lastMoveFrom || null}
-              lastMoveTo={gameState.lastMove || null}
-              myColor={myColor}
-              isMyTurn={isMyTurn}
-              onSelect={handleSelect}
-              width={boardPx.w}
-              height={boardPx.h}
-            />
-            <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
-              {gameState.phase === 'playing' ? (
-                isMyTurn ? <span className="turn-indicator">你的回合 ({gameState?.currentTurn === 'red' ? '🔴红方' : '⚫黑方'})</span>
-                  : <span className="text-muted">等待对手...</span>
-              ) : gameState.phase === 'finished' ? (
-                <span className="game-over-label">对局结束 — {winnerText}</span>
-              ) : null}
-              {gameState.extra?.inCheck && gameState.phase === 'playing' && (
-                <span style={{ color: '#f44336', fontWeight: 700, marginLeft: 12 }}>⚠️ 将军！</span>
-              )}
+            {/* 被吃红棋（左侧） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignContent: 'flex-start', paddingTop: 4, width: boardPx.w * 0.22 }}>
+              {(gameState.extra?.captured as string[] || []).filter((p: string) => p.startsWith('red_')).reverse().map((p: string, i: number) => {
+                const type = p.replace('red_', '');
+                const chars: Record<string, string> = { king: '帅', advisor: '仕', bishop: '相', knight: '馬', rook: '車', cannon: '砲', pawn: '兵' };
+                return <span key={i} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: boardPx.w * 0.08, height: boardPx.w * 0.08, borderRadius: '50%', background: 'radial-gradient(circle, #fff5f5, #e8d0c0)', border: '2px solid #c0392b', fontSize: boardPx.w * 0.045, color: '#c0392b', fontWeight: 600 }}>{chars[type] || '?'}</span>;
+              })}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <ChineseChessBoard
+                board={gameState.board}
+                selectedPos={selectedPos}
+                validMoves={validMoves}
+                lastMoveFrom={gameState.extra?.lastMoveFrom || null}
+                lastMoveTo={gameState.lastMove || null}
+                myColor={myColor}
+                isMyTurn={isMyTurn}
+                onSelect={handleSelect}
+                width={boardPx.w}
+                height={boardPx.h}
+              />
+              <div className={`board-status ${isMobile ? 'mobile-status-bar' : ''}`}>
+                {gameState.phase === 'playing' ? (
+                  isMyTurn ? <span className="turn-indicator">你的回合 ({gameState?.currentTurn === 'red' ? '🔴红方' : '⚫黑方'})</span>
+                    : <span className="text-muted">等待对手...</span>
+                ) : gameState.phase === 'finished' ? (
+                  <span className="game-over-label">对局结束 — {winnerText}</span>
+                ) : null}
+                {gameState.extra?.inCheck && gameState.phase === 'playing' && (
+                  <span style={{ color: '#f44336', fontWeight: 700, marginLeft: 12 }}>⚠️ 将军！</span>
+                )}
+              </div>
+            </div>
+            {/* 被吃黑棋（右侧） */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, justifyContent: 'flex-end', alignContent: 'flex-start', paddingTop: 4, width: boardPx.w * 0.22 }}>
+              {(gameState.extra?.captured as string[] || []).filter((p: string) => p.startsWith('black_')).reverse().map((p: string, i: number) => {
+                const type = p.replace('black_', '');
+                const chars: Record<string, string> = { king: '将', advisor: '士', bishop: '象', knight: '马', rook: '车', cannon: '炮', pawn: '卒' };
+                return <span key={i} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: boardPx.w * 0.08, height: boardPx.w * 0.08, borderRadius: '50%', background: 'radial-gradient(circle, #f5f5f5, #d0d0d0)', border: '2px solid #333', fontSize: boardPx.w * 0.045, color: '#1a1a1a', fontWeight: 600 }}>{chars[type] || '?'}</span>;
+              })}
             </div>
           </>
         )}

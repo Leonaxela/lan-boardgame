@@ -71,6 +71,8 @@ export class Room {
   katagoGame: boolean = false;
   /** 是否是 Fairy-Stockfish 对弈 */
   fairyStockfishGame: boolean = false;
+  /** 棋局状态快照栈（悔棋用） */
+  stateHistory: GameState[] = [];
   /** KataGo 棋盘大小 */
   katagoBoardSize: number = 19;
   /** AI 难度等级 */

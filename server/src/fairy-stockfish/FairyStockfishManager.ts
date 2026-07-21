@@ -268,6 +268,13 @@ export class FairyStockfishManager {
           const mateIn = parseInt(mateMatch[1], 10);
           session.lastScore = mateIn > 0 ? 100 : -100;
         }
+        // UCCI 模式：score 35（无 cp 后缀）
+        if (session.lastScore === null) {
+          const ucciScore = line.match(/\bscore\s+(-?\d+)\b/);
+          if (ucciScore) {
+            session.lastScore = parseInt(ucciScore[1], 10) / 100;
+          }
+        }
         const depthMatch = line.match(/depth\s+(\d+)/);
         if (depthMatch) {
           session.lastDepth = parseInt(depthMatch[1], 10);
@@ -310,6 +317,13 @@ export class FairyStockfishManager {
     session.moveHistory.push(uci);
   }
 
+  /** 悔棋：从引擎历史中移除最后 N 步 */
+  undoMove(roomId: string, steps: number): void {
+    const session = this.sessions.get(roomId);
+    if (!session) return;
+    session.moveHistory.splice(session.moveHistory.length - steps);
+  }
+
   /** 获取 AI 最佳走法 */
   async getBestMove(roomId: string): Promise<{ from: { row: number; col: number }; to: { row: number; col: number } } | null> {
     const session = this.sessions.get(roomId);
@@ -345,7 +359,7 @@ export class FairyStockfishManager {
       const movesStr = session.moveHistory.join(' ');
       const posCmd = movesStr ? `position startpos moves ${movesStr}` : 'position startpos';
       this.sendSilentCommand(roomId, posCmd);
-      await this.sendCommand(roomId, 'go movetime 500', 30000);
+      await this.sendCommand(roomId, 'go movetime 1500', 30000);
     } catch { /* 超时无所谓 */ }
   }
 

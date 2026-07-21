@@ -164,6 +164,25 @@ export default function ChineseChessBoard({
     ctx.lineWidth = 3;
     ctx.strokeRect(padX - 2, padY - 2, (COLS - 1) * cellW + 4, (ROWS - 1) * cellH + 4);
 
+    // ── 坐标标注（padding 区域） ──
+    ctx.font = `bold ${Math.round(cellH * 0.22)}px "KaiTi", "STKaiti", sans-serif`;
+    ctx.textBaseline = 'middle';
+    // 横坐标 a-i：底部
+    ctx.textAlign = 'center';
+    for (let c = 0; c < COLS; c++) {
+      const displayCol = myColor === 'black' ? COLS - 1 - c : c;
+      const file = String.fromCharCode(97 + displayCol); // a-i
+      ctx.fillStyle = 'rgba(90,62,10,0.4)';
+      ctx.fillText(file, padX + c * cellW, padY + (ROWS - 1) * cellH + cellH * 0.5);
+    }
+    // 纵坐标 0-9：左侧（UCCI：底部 0 = 红方，顶部 9 = 黑方）
+    ctx.textAlign = 'right';
+    for (let r = 0; r < ROWS; r++) {
+      const displayRow = myColor === 'black' ? r : ROWS - 1 - r;
+      ctx.fillStyle = 'rgba(90,62,10,0.4)';
+      ctx.fillText(String(displayRow), padX - cellW * 0.45, padY + r * cellH);
+    }
+
     // ── 选中高亮：虚线圆 ──
     if (selectedPos) {
       const { x, y } = toCanvas(selectedPos.row, selectedPos.col);
