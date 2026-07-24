@@ -12,6 +12,7 @@ import { getGameResultText } from '../../utils/gameResult';
 import { useFavicon } from '../../hooks/useFavicon';
 import { modalConfirm } from '../../components/Modal';
 import Dropdown from '../../components/Dropdown';
+import CoachPet from '../../components/CoachPet';
 
 function playCheckSound() {
   try {
@@ -207,16 +208,6 @@ export default function ChessRoomPage() {
 
   const displayResult = gameResult || lastResultRef.current;
 
-  // Fairy-Stockfish 评估数据
-  useEffect(() => {
-    const unsub = wsClient.on('fairy_eval', (p: any) => {
-      setFairyEval(p.score ?? null);
-      setFairyDepth(p.depth ?? null);
-      setFairyPv(p.pv ?? null);
-    });
-    return unsub;
-  }, []);
-
   const winnerText = getGameResultText({
     winner: displayResult?.winner,
     loser: (displayResult as any)?.loser,
@@ -229,6 +220,50 @@ export default function ChessRoomPage() {
   const [fairyEval, setFairyEval] = useState<number | null>(null);
   const [fairyDepth, setFairyDepth] = useState<number | null>(null);
   const [fairyPv, setFairyPv] = useState<string | null>(null);
+  // ── AI 教练 ──
+  const [coachMsgs, setCoachMsgs] = useState<{ text: string; type: 'good' | 'ok' | 'bad' | 'miss' }[]>([]);
+  const prevCoachScore = useRef<number | null>(null);
+  // 扩展 fairy_eval handler 添加教练评价
+  const coachUnsubRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    coachUnsubRef.current();
+    const unsub = wsClient.on('fairy_eval', (p: any) => {
+      const score = p.score;
+      if (score !== null && prevCoachScore.current !== null) {
+        const myColor = room?.players?.find(p => p.id === myId)?.color || 'white';
+        const delta = myColor === 'white' ? score - prevCoachScore.current : prevCoachScore.current - score;
+        let text = '', type: 'good' | 'ok' | 'bad' | 'miss' = 'ok';
+        if (delta > 0.8) { text = `💪 好棋！优势扩大 (+${delta.toFixed(1)})`; type = 'good'; }
+        else if (delta > 0.3) { text = `👍 不错，逐步占优 (+${delta.toFixed(1)})`; type = 'good'; }
+        else if (delta > 0.1) { text = `📌 有进步 (+${delta.toFixed(1)})`; type = 'good'; }
+        else if (delta > -0.1) { text = `⏳ 局势平稳`; type = 'ok'; }
+        else if (delta > -0.5) { text = `🤔 这步值得商榷 (${delta.toFixed(1)})`; type = 'bad'; }
+        else if (delta > -1.5) { text = `😬 漏算了！损失约 ${Math.abs(delta).toFixed(1)} 兵`; type = 'miss'; }
+        else { text = `😱 大漏！损失惨重 (${delta.toFixed(1)})`; type = 'miss'; }
+        if (p.pv) {
+          const suggestion = p.pv.replace(/(\w{2})(\w{2})/g, '$1-$2').split(' ').slice(0, 3).join(' ');
+          if (type === 'bad' || type === 'miss') text += ` 建议 ${suggestion}`;
+          else if (delta > 0.3) text += ` 推荐 ${suggestion}`;
+        }
+        // 劣势时加油打气
+        if (delta < -0.3 && prevCoachScore.current !== null && prevCoachScore.current < -1) text = `💪 别灰心，还有机会！${text}`;
+        setCoachMsgs(prev => [...prev.slice(-4), { text, type }]);
+      }
+      prevCoachScore.current = score;
+      setFairyEval(score);
+      setFairyDepth(p.depth ?? null);
+      setFairyPv(p.pv ?? null);
+    });
+    coachUnsubRef.current = unsub;
+    return unsub;
+  }, [myId, room?.players]);
+
+  // AI 教练开局问候
+  useEffect(() => {
+    if (gameState?.phase === 'playing' && room?.players?.some(p => p.id.startsWith('ai-fairy')) && coachMsgs.length === 0) {
+      setCoachMsgs([{ text: '👋 我是你的 AI 教练，让我们变得更强吧！😊', type: 'ok' }]);
+    }
+  }, [gameState?.phase, room?.players]);
 
   // AI 对局终局弹窗延迟 3 秒
   const [showGameOver, setShowGameOver] = useState(false);
@@ -268,7 +303,7 @@ export default function ChessRoomPage() {
 
   return (
     <>
-    <div className="room-page">
+    <div className="room-page" style={{ position: 'relative' }}>
       <aside className="room-sidebar">
         <div className="room-header">
           <button className="btn-room-id">房间 {roomId}</button>
@@ -664,6 +699,14 @@ export default function ChessRoomPage() {
           </div>
         )}
       </main>
+
+      {/* AI 教练 桌面宠物 */}
+      {room?.players?.some(p => p.id.startsWith('ai-fairy')) && (
+        <CoachPet
+          visible={coachMsgs.length > 0}
+          message={coachMsgs.length > 0 ? coachMsgs[coachMsgs.length - 1] : null}
+        />
+      )}
 
       <aside className="room-chat">
         <h3>聊天</h3>

@@ -1,0 +1,36 @@
+{
+  "frameWidth": 356,
+  "frameHeight": 480,
+  "animations": {
+    "idle": {
+      "frames": ["idle_1.png", "idle_2.png", "idle_3.png", "idle_4.png", "idle_5.png", "idle_6.png"],
+      "loop": true,
+      "speed": 4
+    },
+    "wave": {
+      "frames": ["wave_1.png", "wave_2.png", "wave_3.png", "wave_4.png", "wave_5.png", "wave_6.png"],
+      "loop": false,
+      "speed": 6
+    },
+    "happy": {
+      "frames": ["happy_1.png", "happy_2.png"],
+      "loop": false,
+      "speed": 5
+    },
+    "think": {
+      "frames": ["think_1.png", "think_2.png"],
+      "loop": false,
+      "speed": 5
+    },
+    "sad": {
+      "frames": ["sad_1.png", "sad_2.png"],
+      "loop": false,
+      "speed": 5
+    },
+    "surprise": {
+      "frames": ["surprise_1.png"],
+      "loop": false,
+      "speed": 3
+    }
+  }
+}
