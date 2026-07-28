@@ -7,6 +7,7 @@ import { formatChatTime, isSystemMsg, shouldShowTimeDivider, renderHighlightedTe
 import ChessBoard from '../../games/chess/ChessBoard';
 import { ChessEngine } from '@lan-boardgame/chess/engine';
 import Confetti from '../../components/Confetti';
+import AnalysisView from '../../components/AnalysisView';
 import { playVictorySound } from '../../utils/sound';
 import { getGameResultText } from '../../utils/gameResult';
 import { useFavicon } from '../../hooks/useFavicon';
@@ -282,6 +283,23 @@ export default function ChessRoomPage() {
   const [aiDifficulty, setAiDifficulty] = useState(2);
   const [showDiffInfo, setShowDiffInfo] = useState(false);
   const [showFairyConfig, setShowFairyConfig] = useState(false);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [showAnalysisPgn, setShowAnalysisPgn] = useState(false);
+  const [analysisPgn, setAnalysisPgn] = useState('');
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisData, setAnalysisData] = useState<any[]>([]);
+  const [analysisStep, setAnalysisStep] = useState(-1);
+  const [progressPct, setProgressPct] = useState(0);
+  const chartScrollRef = useRef<HTMLDivElement>(null);
+
+  // 分析图表自动滚动到当前步
+  useEffect(() => {
+    if (!chartScrollRef.current || analysisStep < 0) return;
+    const el = chartScrollRef.current;
+    const chartW = Math.min(Math.max(analysisData.length * 12, 200), 600);
+    const targetX = analysisStep * (chartW / Math.max(analysisData.length - 1, 1)) - el.clientWidth / 2;
+    el.scrollTo({ left: Math.max(0, targetX), behavior: 'smooth' });
+  }, [analysisStep, analysisData]);
   const [fairyDifficulty, setFairyDifficulty] = useState(2);
   const [fairyPlayerColor, setFairyPlayerColor] = useState('white');
   const [guessNumber, setGuessNumber] = useState('');
@@ -336,8 +354,80 @@ export default function ChessRoomPage() {
           )) : <div className="player-item empty">暂无观战</div>}
         </div>
         <div className="sidebar-actions">
-          {isOwner && (!gameState || gameState.phase === 'finished') && (
+          {showAnalysis ? (
+            <>
+              {/* 分析数据先显示 */}
+              {analysisData.length > 0 && analysisStep >= 0 && analysisStep < analysisData.length && (
+                <div style={{ marginBottom: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {(() => {
+                    const cur = analysisData[analysisStep];
+                    const scores = analysisData.filter((a: any) => a.score !== null).map((a: any) => a.score);
+                    const maxScore = Math.min(Math.max(...scores.map(Math.abs), 1), 5);
+                    const chartW = Math.min(Math.max(analysisData.length * 12, 200), 600);
+                    return (
+                      <>
+                        <div style={{ padding: '6px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.04)', fontSize: 11 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 2 }}>第 {analysisStep + 1} 手 {cur.move.replace(/(\w{2})(\w{2})/g, '$1-$2')}</div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {cur.score !== null && <span style={{ color: cur.score >= 0 ? '#4caf50' : '#f44336' }}>评分 {cur.score > 0 ? '+' : ''}{cur.score.toFixed(1)}</span>}
+                            {cur.delta !== null && <span style={{ color: cur.delta >= 0 ? '#4caf50' : '#f44336' }}>±{cur.delta > 0 ? '+' : ''}{cur.delta.toFixed(1)}</span>}
+                            {cur.depth !== null && <span>深度 {cur.depth}</span>}
+                          </div>
+                          {cur.pv && <div style={{ color: 'rgba(255,255,255,0.4)', marginTop: 2, fontFamily: 'monospace', fontSize: 10 }}>PV: {cur.pv.replace(/(\w{2})(\w{2})/g, '$1-$2')}</div>}
+                        </div>
+                        <div ref={chartScrollRef} style={{ padding: 6, borderRadius: 6, background: 'rgba(255,255,255,0.02)', overflowX: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.06) transparent', flexShrink: 0 }}>
+                          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>📈 胜率曲线</div>
+                          <svg width={chartW} height={76} style={{ display: 'block', cursor: 'pointer', flexShrink: 0 }}>
+                            {/* 中位线 (50%) */}
+                            <line x1={0} y1={38} x2={chartW} y2={38} stroke="rgba(255,255,255,0.3)" strokeWidth={1} />
+                            {/* 纵轴标注 */}
+                            <text x={3} y={7} fill="rgba(255,255,255,0.12)" fontSize="7">100%</text>
+                            <text x={3} y={40} fill="rgba(255,255,255,0.12)" fontSize="7">50%</text>
+                            <text x={3} y={72} fill="rgba(255,255,255,0.12)" fontSize="7">0%</text>
+                            {/* 折线 + 数据点 */}
+                            {analysisData.map((a: any, i: number) => {
+                              const x = 5 + i * ((chartW - 10) / Math.max(analysisData.length - 1, 1));
+                              const wr = a.score !== null ? 100 / (1 + Math.pow(10, -a.score / 4)) : null;
+                              const y = wr !== null ? Math.max(5, Math.min(71, 71 - (wr / 100) * 66)) : 38;
+                              return <g key={i} onClick={() => setAnalysisStep(i)} style={{ cursor: 'pointer' }}>
+                                {i > 0 && wr !== null && analysisData[i - 1].score !== null && (() => {
+                                  const pwr = 100 / (1 + Math.pow(10, -analysisData[i - 1].score / 4));
+                                  const py = Math.max(5, Math.min(71, 71 - (pwr / 100) * 66));
+                                  return <line x1={5 + (i - 1) * ((chartW - 10) / Math.max(analysisData.length - 1, 1))} y1={py} x2={x} y2={y} stroke="rgba(255,255,255,0.18)" strokeWidth={1.5} />;
+                                })()}
+                                <circle cx={x} cy={y} r={2} fill={wr !== null ? '#fff' : 'rgba(255,255,255,0.05)'} stroke={wr !== null ? 'rgba(0,0,0,0.4)' : 'transparent'} strokeWidth={1} />
+                              </g>;
+                            })}
+                            {/* 当前步指示 */}
+                            {analysisStep >= 0 && (() => {
+                              const stepX = 5 + analysisStep * ((chartW - 10) / Math.max(analysisData.length - 1, 1));
+                              const curScore = analysisData[analysisStep]?.score;
+                              const wr = curScore !== null ? 100 / (1 + Math.pow(10, -curScore / 4)) : null;
+                              return <>
+                                <line x1={stepX} y1={3} x2={stepX} y2={70} stroke="#dcb35c" strokeWidth={1} strokeDasharray="2,2" />
+                                {/* 手数（中间） */}
+                                <text x={stepX} y={37} textAnchor="middle" fill="#dcb35c" fontSize="10" fontWeight="700">{analysisStep + 1}</text>
+                                {/* 顶部白方胜率 */}
+                                {wr !== null && <text x={stepX + 4} y={9} textAnchor="start" fill="#fff" fontSize="9" fontWeight="600">{wr.toFixed(1)}%</text>}
+                                {/* 底部黑方胜率 */}
+                                {wr !== null && <text x={stepX + 4} y={68} textAnchor="start" fill="rgba(255,255,255,0.35)" fontSize="9" fontWeight="600">{(100 - wr).toFixed(1)}%</text>}
+                              </>;
+                            })()}
+                          </svg>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+              <button className="btn-sidebar" onClick={() => setShowAnalysis(false)}>← 退出分析</button>
+            </>
+          ) : isOwner && (!gameState || gameState.phase === 'finished') && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+              <button className="btn-sidebar" style={{ whiteSpace: 'nowrap' }}
+                onClick={() => setShowAnalysisPgn(true)}>
+                📊 使用Fairy-Stockfish分析
+              </button>
               <button className="btn-sidebar" style={{ whiteSpace: 'nowrap' }}
                 onClick={() => setShowFairyConfig(true)}>
                 🤖 与Fairy-Stockfish对弈
@@ -483,7 +573,9 @@ export default function ChessRoomPage() {
       </aside>
 
       <main className="room-board" ref={boardContainerRef} style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        {!gameState ? (
+        {showAnalysis ? (
+          <AnalysisView width={boardPx.w} height={boardPx.h} analysis={analysisData} step={analysisStep} onStep={setAnalysisStep} />
+        ) : !gameState ? (
           <div style={{ textAlign: 'center' }}>
             <ChessBoard
               board={INITIAL_BOARD}
@@ -820,6 +912,73 @@ export default function ChessRoomPage() {
               }}
             >开始对弈</button>
           </div>
+        </div>
+      </div>
+    )}
+
+    {showAnalysisPgn && (
+      <div className="modal-overlay" onClick={() => { if (!analysisLoading) setShowAnalysisPgn(false); }}>
+        <div className="modal-content" onClick={e => e.stopPropagation()} style={{ minWidth: 400, maxWidth: 500, minHeight: 260, position: 'relative' }}>
+          {analysisLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 40, minHeight: 200 }}>
+              <div style={{ fontSize: 48, marginBottom: 16, animation: 'hourglassFlip 1.5s ease-in-out infinite' }}>⏳</div>
+              <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.7)', marginBottom: 12 }}>正在分析棋谱...</div>
+              <div style={{ width: 220, height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ width: `${progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #dcb35c, #f5d98a, #dcb35c)', backgroundSize: '200% 100%', borderRadius: 2, animation: 'shimmer 1.5s ease-in-out infinite' }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 12 }}>引擎评估中，步数越多时间越长...</div>
+              <style>{`@keyframes hourglassFlip { 0% { transform: rotate(0deg); } 50% { transform: rotate(180deg); } 100% { transform: rotate(180deg); } } @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+            </div>
+          ) : (
+            <>
+              <h2 style={{ marginBottom: 16 }}>📊 PGN 棋谱分析</h2>
+              <div style={{ marginBottom: 8 }}>
+                <button className="btn-sidebar" style={{ fontSize: 12, padding: '4px 10px' }} onClick={() => document.getElementById('pgn-file-input')?.click()}>
+                  📁 选择 PGN 文件
+                </button>
+                <input id="pgn-file-input" type="file" accept=".pgn,.txt" style={{ display: 'none' }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader(); r.onload = () => setAnalysisPgn(r.result as string); r.readAsText(f);
+                }} />
+              </div>
+              <textarea
+                value={analysisPgn}
+                onChange={e => setAnalysisPgn(e.target.value)}
+                placeholder="粘贴 PGN 棋谱文本..."
+                rows={6}
+                style={{
+                  width: '100%', padding: 10, borderRadius: 6, border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(255,255,255,0.03)', color: '#fff', fontSize: 12, fontFamily: 'monospace',
+                  resize: 'vertical', marginBottom: 12, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-sidebar" onClick={() => setShowAnalysisPgn(false)} disabled={analysisLoading}>取消</button>
+                <button className="btn-sidebar" disabled={!analysisPgn.trim() || analysisLoading} onClick={async () => {
+                  setAnalysisLoading(true);
+                  setProgressPct(0);
+                  const progressTimer = setInterval(() => {
+                    setProgressPct(p => p < 85 ? p + Math.random() * 3 + 0.5 : p < 90 ? p + 0.3 : p);
+                  }, 800);
+                  try {
+                    const res = await fetch('/api/chess/analyze', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ pgn: analysisPgn }),
+                    });
+                    const data = await res.json();
+                    if (data.error) { alert(data.error); return; }
+                    setAnalysisData(data.analysis || []);
+                    setAnalysisStep(-1);
+                    setShowAnalysisPgn(false);
+                    setShowAnalysis(true);
+                  } catch { alert('分析失败'); }
+                  finally { clearInterval(progressTimer); setAnalysisLoading(false); }
+                }}>
+                  {analysisLoading ? '⏳ 分析中...' : '🚀 开始分析'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     )}

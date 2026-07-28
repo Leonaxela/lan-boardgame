@@ -14,6 +14,7 @@ import sgfRoutes from './routes/sgf.js';
 import gamesRoutes from './routes/games.js';
 import usersRoutes from './routes/users.js';
 import musicRoutes from './routes/music.js';
+import chessAnalysisRoutes from './routes/chessAnalysis.js';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -45,6 +46,7 @@ async function start() {
   app.use('/api/games', gamesRoutes);
   app.use('/api/users', usersRoutes);
   app.use('/api/music', musicRoutes);
+  app.use('/api/chess', chessAnalysisRoutes);
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
   });

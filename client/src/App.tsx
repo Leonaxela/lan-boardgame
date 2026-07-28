@@ -7,6 +7,7 @@ import EmojiGamePage from './pages/emoji/EmojiGamePage';
 import MahjongPage from './pages/mahjong/MahjongPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboard from './pages/AdminDashboard';
+import ChessAnalysis from './pages/ChessAnalysis';
 import { ModalContainer } from './components/Modal';
 
 export default function App() {
@@ -25,6 +26,9 @@ export default function App() {
       {/* 管理后台 */}
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin" element={<AdminDashboard />} />
+
+      {/* 棋谱分析 */}
+      <Route path="/chess-analysis" element={<ChessAnalysis />} />
 
       {/* 兜底 */}
       <Route path="*" element={<Navigate to="/login" replace />} />

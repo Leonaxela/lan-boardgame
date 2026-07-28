@@ -596,7 +596,13 @@ body {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   animation: slideUp 0.3s ease-out;
   position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.15) transparent;
 }
+.modal-content::-webkit-scrollbar { width: 6px; }
+.modal-content::-webkit-scrollbar-track { background: transparent; }
+.modal-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+.modal-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 /* 弹窗顶部反光 */
 .modal-content::before {
   content: '';
