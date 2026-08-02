@@ -202,9 +202,10 @@ export default function AdminDashboard() {
                     <thead><tr><th>序号</th><th>用户</th><th>房间</th><th>角色</th><th>状态</th></tr></thead>
                     <tbody>
                       {onlineUsers.map((u, i) => {
-                        const gameLabel = GAME_TYPE_MAP[u.game_type] || u.game_type;
-                        const role = u.is_owner ? '👑 房主' : u.is_player ? '🎮 玩家' : '👤 观众';
-                        const status = u.activity === 'playing' ? <span className="status-playing">对弈中</span> : <span className="status-idle">空闲</span>;
+                        const inRoom = !!u.room_id;
+                        const gameLabel = inRoom ? (GAME_TYPE_MAP[u.game_type] || u.game_type) : '大厅';
+                        const role = !inRoom ? '👤 在线' : u.is_owner ? '👑 房主' : u.is_player ? '🎮 玩家' : '👤 观众';
+                        const status = !inRoom ? <span className="status-idle">在线</span> : u.activity === 'playing' ? <span className="status-playing">对弈中</span> : <span className="status-idle">空闲</span>;
                         return (
                           <tr key={u.user_id}>
                         <td>{(recordsPage - 1) * recordsPerPage + i + 1}</td>

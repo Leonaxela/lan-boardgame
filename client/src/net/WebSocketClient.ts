@@ -107,6 +107,15 @@ class WSClient {
     };
   }
 
+  /**
+   * 清空消息缓存（退出房间/离开对局时调用）。
+   * SPA 跳转不刷新页面，wsClient 单例与 lastMessage 缓存持续存活；
+   * 若不清理，回到大厅后 LobbyPage 订阅 room_joined 会被旧缓存触发，再次跳回已销毁的房间 → 循环闪屏。
+   */
+  clearCache(): void {
+    this.lastMessage.clear();
+  }
+
   /** 是否已连接 */
   get isConnected(): boolean {
     return this.connected;
@@ -119,6 +128,11 @@ class WSClient {
       'mahjong_seat_changed', 'room_destroyed'];
     if (cacheTypes.includes(type)) {
       this.lastMessage.set(type, payload);
+    }
+    // 房间销毁/离开后，旧缓存（room_joined 等）会把用户重新拉回已销毁房间 → 闪屏；
+    // 此处统一清空，保证任何路径（手动退出/被踢/房间销毁）都干净回大厅
+    if (type === 'room_destroyed') {
+      this.lastMessage.clear();
     }
     const handlers = this.handlers.get(type);
     if (handlers) {

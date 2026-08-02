@@ -7,7 +7,7 @@ import { Dispatcher } from './Dispatcher.js';
 import { RoomManager } from '../room/RoomManager.js';
 import { Room, RoomPlayer, RoomActivity } from '../room/Room.js';
 import { ChatHandler } from '../chat/ChatHandler.js';
-import { upsertUserSession, removeUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed } from '../room/RoomPersistence.js';
+import { upsertUserSession, removeUserSession, ensureUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed } from '../room/RoomPersistence.js';
 import { execute } from '../db/connection.js';
 import { handleEmojiMessage, handleEmojiDisconnect } from '../emoji/EmojiGameManager.js';
 import { handleMahjongMessage } from '../mahjong/MahjongMessageHandler.js';
@@ -22,6 +22,8 @@ export class GameWSServer {
   private onlineTimer: NodeJS.Timeout | null = null;
   /** 待销毁的房间（房主断线30秒倒计时） */
   private pendingDestruction = new Map<string, NodeJS.Timeout>();
+  /** 待移除的断线玩家（非房主断线30秒保护期，期间可 rejoin 恢复） */
+  private pendingPlayerRemoval = new Map<string, NodeJS.Timeout>();
 
   constructor(
     private httpServer: HttpServer,
@@ -52,6 +54,13 @@ export class GameWSServer {
           // 从创建/加入房间消息中提取用户名，用于在线时长统计
           if (msg.payload?.username) {
             (ws as any)._username = msg.payload.username;
+            // 缓存自动进入大厅的用户不会重新走 /login：识别到用户名即补建 session（已有则不重复），
+            // 保证"登录成功就算在线"对刷新/重连场景同样生效
+            try {
+              ensureUserSession(msg.payload.username);
+            } catch (e) {
+              console.error('[WS] ensureUserSession 失败:', e);
+            }
           }
           if (msg.type?.startsWith('emoji_')) {
             handleEmojiMessage(ws, msg);
@@ -114,6 +123,8 @@ export class GameWSServer {
         if (elapsed <= 0) return;
         try {
           execute('UPDATE users SET total_online_seconds = total_online_seconds + ?, last_online_at = datetime("now", "localtime") WHERE username = ?', [elapsed, w._username]);
+          // 在线 = 登录成功且心跳活跃（last_ping 120 秒内），登录即算在线，无需进房间
+          execute('UPDATE user_sessions SET last_ping = datetime("now", "localtime") WHERE username = ?', [w._username]);
         } catch (e) {
           // 静默失败
         }
@@ -141,6 +152,16 @@ export class GameWSServer {
       clearTimeout(timer);
       this.pendingDestruction.delete(roomId);
       console.log('[WS] 已取消房间销毁: ' + roomId);
+    }
+  }
+
+  /** 取消断线玩家移除倒计时（重连时调用） */
+  cancelPendingPlayerRemoval(playerId: string): void {
+    const timer = this.pendingPlayerRemoval.get(playerId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pendingPlayerRemoval.delete(playerId);
+      console.log('[WS] 已取消玩家移除: ' + playerId);
     }
   }
 
@@ -207,7 +228,15 @@ export class GameWSServer {
         }
       }
     }
-    // 清理 session
+    // 清理 session（登录即算在线：任何已登录连接断开都删除 session，包含仅在大厅的用户）
+    const w2 = ws as any;
+    if (w2._username) {
+      try {
+        execute('DELETE FROM user_sessions WHERE username = ?', [w2._username]);
+      } catch (e) {
+        console.error('[WS] 清理登录 session 失败:', e);
+      }
+    }
     if (player?.id) {
       removeUserSession(player.id);
       // 同时清理 login 时写入的 session（user_id=users.id, username=player.username）
@@ -240,44 +269,57 @@ export class GameWSServer {
       });
     } else {
       const wasInGame = room.gameState?.phase === 'playing' && room.players.some(p => p.id === player.id);
-      room.removePlayer(player.id);
-      saveActiveRoom(
-        room.roomId, room.owner?.id || '', room.owner?.username || '',
-        room.gameType, room.config, room.activity,
-        room.players.map(p => p.id)
-      );
 
-      if (wasInGame) {
-        // 对局中玩家断线 → AI 接管
-        const aiColor = room.gameType === GameType.Gomoku ? GOMOKU_COLORS.WHITE : GO_COLORS.WHITE;
-        const aiPlayer: RoomPlayer = {
-          id: 'ai-' + crypto.randomUUID().slice(0, 8),
-          username: '🤖 电脑',
-          color: player.color,
-          ws: null as any,
-          isOwner: false,
-          joinedAt: Date.now(),
-        };
-        room.players.push(aiPlayer);
+      // 非房主断线：30秒保护期，期间可 rejoin 恢复（与房主保护一致，避免刷新页面丢房间）
+      const removalTimer = setTimeout(() => {
+        this.pendingPlayerRemoval.delete(player.id);
+        // 房间可能已被销毁，或玩家已通过 rejoin 换新 ws 恢复
+        const currentRoom = this.roomManager.getRoom(room.roomId);
+        if (!currentRoom) return;
+        const currentPlayer = currentRoom.getAllPlayers().find(p => p.id === player.id);
+        if (!currentPlayer || (currentPlayer.ws && currentPlayer.ws.readyState === WebSocket.OPEN)) return;
 
-        room.broadcast({
-          type: 'player_left',
-          payload: { playerId: player.id, username: player.username, message: `${player.username} 断线，电脑接管` },
-        });
-        room.broadcast({
-          type: 'room_updated',
-          payload: { room: room.toSnapshot() },
-        });
-      } else {
-        room.broadcast({
-          type: 'player_left',
-          payload: { playerId: player.id, username: player.username, disconnected: true },
-        });
-        room.broadcastExcept({
-          type: 'room_updated',
-          payload: { room: room.toSnapshot() },
-        }, '');
-      }
+        const wasInGameNow = currentRoom.gameState?.phase === 'playing' && currentRoom.players.some(p => p.id === player.id);
+        currentRoom.removePlayer(player.id);
+        saveActiveRoom(
+          currentRoom.roomId, currentRoom.owner?.id || '', currentRoom.owner?.username || '',
+          currentRoom.gameType, currentRoom.config, currentRoom.activity,
+          currentRoom.players.map(p => p.id)
+        );
+
+        if (wasInGameNow) {
+          // 对局中玩家断线 → AI 接管
+          const aiColor = currentRoom.gameType === GameType.Gomoku ? GOMOKU_COLORS.WHITE : GO_COLORS.WHITE;
+          const aiPlayer: RoomPlayer = {
+            id: 'ai-' + crypto.randomUUID().slice(0, 8),
+            username: '🤖 电脑',
+            color: player.color,
+            ws: null as any,
+            isOwner: false,
+            joinedAt: Date.now(),
+          };
+          currentRoom.players.push(aiPlayer);
+
+          currentRoom.broadcast({
+            type: 'player_left',
+            payload: { playerId: player.id, username: player.username, message: `${player.username} 断线，电脑接管` },
+          });
+          currentRoom.broadcast({
+            type: 'room_updated',
+            payload: { room: currentRoom.toSnapshot() },
+          });
+        } else {
+          currentRoom.broadcast({
+            type: 'player_left',
+            payload: { playerId: player.id, username: player.username, disconnected: true },
+          });
+          currentRoom.broadcastExcept({
+            type: 'room_updated',
+            payload: { room: currentRoom.toSnapshot() },
+          }, '');
+        }
+      }, 30000);
+      this.pendingPlayerRemoval.set(player.id, removalTimer);
     }
   }
 }

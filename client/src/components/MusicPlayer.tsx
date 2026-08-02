@@ -468,6 +468,7 @@ export default function MusicPlayer({ onClose }: MusicPlayerProps) {
                 </button>
                 {showVolume && (
                   <div className="music-vol-popup">
+                    <div className="music-vol-value">{Math.round(volume * 100)}%</div>
                     <input
                       type="range" min={0} max={1} step={0.01}
                       value={volume}

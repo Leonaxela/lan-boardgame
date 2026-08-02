@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { wsClient } from '../net/WebSocketClient';
 import { modalAlert, modalConfirm } from '../components/Modal';
 import { playMoveSound } from '../utils/sound';
@@ -41,6 +42,7 @@ interface GameResult {
 }
 
 export function useRoom() {
+  const nav = useNavigate();
   const [room, setRoom] = useState<RoomSnapshot | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   const setMyIdAndRef = (id: string | null) => { setMyId(id); myIdRef.current = id; };
@@ -84,7 +86,11 @@ export function useRoom() {
   const respondChallenge = useCallback((accepted: boolean) => {
     wsClient.send('challenge_response', { accepted });
   }, []);
-  const leaveRoom = useCallback(() => { localStorage.removeItem('rejoin_room'); wsClient.send('leave_room', {}); }, []);
+  const leaveRoom = useCallback(() => {
+    localStorage.removeItem('rejoin_room');
+    wsClient.clearCache(); // 清掉 room_joined/room_destroyed 等缓存，避免回大厅后被旧缓存触发循环跳转（闪屏）
+    wsClient.send('leave_room', {});
+  }, []);
   const sendChat = useCallback((text: string) => { wsClient.send('chat', { text }); }, []);
   const sendGuessNumber = useCallback((number: number) => { wsClient.send('guess_first_number', { number }); }, []);
   const sendGuessChoice = useCallback((choice: string) => { wsClient.send('guess_first_choice', { choice }); }, []);
@@ -109,14 +115,28 @@ export function useRoom() {
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
-    unsubs.push(wsClient.on('room_created', (p) => { setRoom(p.room); setMyIdAndRef(p.player.id); setChatMessages([]); setGameState(null); setGameResult(null);  setMyColor(p.player.color); }));
-    unsubs.push(wsClient.on('room_joined', (p) => { setRoom(p.room); setMyIdAndRef(p.player.id); setChatMessages([]); setGameState(null); setGameResult(null); setMyColor(p.player.color); }));
+    unsubs.push(wsClient.on('room_created', (p) => {
+      // 记录重连凭据(roomId + playerId)，刷新页面后据此自动 rejoin
+      if (p.room?.roomId && p.player?.id) {
+        localStorage.setItem('rejoin_room', JSON.stringify({ roomId: p.room.roomId, playerId: p.player.id }));
+      }
+      setRoom(p.room); setMyIdAndRef(p.player.id); setChatMessages([]); setGameState(null); setGameResult(null);  setMyColor(p.player.color);
+    }));
+    unsubs.push(wsClient.on('room_joined', (p) => {
+      if (p.room?.roomId && p.player?.id) {
+        localStorage.setItem('rejoin_room', JSON.stringify({ roomId: p.room.roomId, playerId: p.player.id }));
+      }
+      setRoom(p.room); setMyIdAndRef(p.player.id); setChatMessages([]); setGameState(null); setGameResult(null); setMyColor(p.player.color);
+    }));
     unsubs.push(wsClient.on('room_updated', (p) => { setRoom(p.room); if (p.room?.gameState) setGameState(p.room.gameState); else setGameState(null); const me = p.room?.players?.find((pl: any) => pl.id === myIdRef.current); if (me) setMyColor(me.color); }));
 
     unsubs.push(wsClient.on('room_destroyed', (p) => {
       setRoom(null); setMyIdAndRef(null); setGameState(null); setGameResult(null); setKatagoAnalysisReport(null); localStorage.removeItem('rejoin_room');
+      // 清掉 room_joined/room_updated 等缓存：否则回大厅后 LobbyPage 订阅被旧缓存触发，再次跳回已销毁房间 → 闪屏 + “房间已销毁”误报
+      wsClient.clearCache();
+      // 用 SPA 跳转而非整页刷新，保留音乐播放器模块级音频状态
       if (window.location.pathname.startsWith('/room/')) {
-        window.location.href = '/';
+        nav('/');
       }
     }));
 

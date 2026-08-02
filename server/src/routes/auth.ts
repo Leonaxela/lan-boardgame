@@ -42,6 +42,14 @@ router.post('/register', (req: Request, res: Response) => {
 
   const token = signToken({ userId: id, username, role: 'user' });
 
+  // 注册即登录成功：写入登录 session（登录成功即算在线）
+  execute(
+    `INSERT INTO user_sessions (user_id, username, room_id, last_ping)
+     VALUES (?, ?, NULL, datetime('now', 'localtime'))
+     ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, room_id=excluded.room_id, last_ping=excluded.last_ping`,
+    [id, username]
+  );
+
   res.status(201).json({
     token,
     user: { id, username, nickname: username, role: 'user' },
@@ -79,9 +87,10 @@ router.post('/login', (req: Request, res: Response) => {
     return;
   }
 
-  // 检查是否已在其他设备登录（user_sessions 中有该用户名的活跃记录）
+  // 检查是否已在其他设备登录（user_sessions 中有该用户名的活跃记录，last_ping 120 秒内）
+  // last_ping 存储为 localtime，比较基准必须同为 localtime（julianday('now') 是 UTC，会时区错位）
   const existingSession = queryOne(
-    'SELECT 1 FROM user_sessions WHERE username = ?',
+    "SELECT 1 FROM user_sessions WHERE username = ? AND julianday(last_ping) >= julianday(datetime('now', 'localtime')) - 120.0/86400",
     [username]
   );
   if (existingSession) {
@@ -91,9 +100,11 @@ router.post('/login', (req: Request, res: Response) => {
 
   const token = signToken({ userId: user.id, username: user.username, role: user.role });
 
-  // 写入登录 session（标记在线状态，后续 WS 断开时清理）
+  // 写入登录 session（登录成功即算在线，后续 WS 断开时清理）
   execute(
-    'INSERT INTO user_sessions (user_id, username, room_id, last_ping) VALUES (?, ?, NULL, datetime(\'now\', \'localtime\'))',
+    `INSERT INTO user_sessions (user_id, username, room_id, last_ping)
+     VALUES (?, ?, NULL, datetime('now', 'localtime'))
+     ON CONFLICT(user_id) DO UPDATE SET username=excluded.username, room_id=excluded.room_id, last_ping=excluded.last_ping`,
     [user.id, username]
   );
 

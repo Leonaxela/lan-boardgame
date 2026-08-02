@@ -134,30 +134,45 @@ export default function UserProfileModal({ username, isMe = false, onClose }: Us
 
   const loadProfile = useCallback(async () => {
     setLoadingProfile(true);
-    try {
-      const res = await fetch(`/api/users/${encodeURIComponent(username)}/profile`);
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || '加载失败'); return; }
-      setProfile(data);
-    } catch {
-      setError('网络错误');
-    } finally {
-      setLoadingProfile(false);
+    // 开发模式下 server 用 tsx watch,保存代码会短暂重启导致 ECONNREFUSED;重试几次自动越过
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/profile`);
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || '加载失败'); return; }
+        setProfile(data);
+        setError('');
+        return;
+      } catch {
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 600));
+        } else {
+          setError('网络错误，请稍后重试');
+        }
+      }
     }
+    setLoadingProfile(false);
   }, [username]);
 
   const loadRecords = useCallback(async (p: number) => {
     setLoadingRecords(true);
-    try {
-      const res = await fetch(`/api/users/${encodeURIComponent(username)}/records?page=${p}&limit=10`);
-      const data = await res.json();
-      if (!res.ok) { setError(data.error || '加载失败'); return; }
-      setRecords(data);
-    } catch {
-      setError('网络错误');
-    } finally {
-      setLoadingRecords(false);
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/records?page=${p}&limit=10`);
+        const data = await res.json();
+        if (!res.ok) { setError(data.error || '加载失败'); return; }
+        setRecords(data);
+        setError('');
+        return;
+      } catch {
+        if (attempt < 3) {
+          await new Promise(r => setTimeout(r, 600));
+        } else {
+          setError('网络错误，请稍后重试');
+        }
+      }
     }
+    setLoadingRecords(false);
   }, [username]);
 
   useEffect(() => { loadProfile(); }, [loadProfile]);

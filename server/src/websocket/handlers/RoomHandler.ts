@@ -3,7 +3,7 @@ import { GameType, GameConfig, GamePhase } from '@lan-boardgame/shared';
 import { Room, RoomPlayer, RoomActivity } from '../../room/Room.js';
 import { kataGoManager } from '../../katago/KataGoManager.js';
 import { fairyStockfishManager } from '../../fairy-stockfish/FairyStockfishManager.js';
-import { upsertUserSession, removeUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed } from '../../room/RoomPersistence.js';
+import { upsertUserSession, updateUserRoom, ensureUserSession, saveActiveRoom, removeActiveRoom, logRoomDestroyed, getOnlineCount } from '../../room/RoomPersistence.js';
 import { getEngine, enrichGameResult, sendError } from '../utils.js';
 import type { ClientMessage, DispatcherContext } from '../types.js';
 
@@ -96,7 +96,8 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
       // 系统消息：通知全房间有玩家离开（在房间销毁前广播，确保消息能送达）
       ctx.chatHandler.sendSystemMessage(room, `${player.username} 离开了房间`, [player.username]);
 
-      removeUserSession(player.id);
+      // 登录即算在线：离开房间不清除 session，只清 room_id（用户仍在线）
+      updateUserRoom(player.id, null);
       if (player.isOwner) {
         if (room.katagoGame) kataGoManager.destroySession(room.roomId);
         if (room.fairyStockfishGame) fairyStockfishManager.destroySession(room.roomId);
@@ -151,9 +152,11 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
       gameStats[r.gameType].players += r.totalPeople;
     }
 
+    const onlineCount = getOnlineCount();
+
     ws.send(JSON.stringify({
       type: 'room_list',
-      payload: { rooms, gameStats },
+      payload: { rooms, gameStats, onlineCount },
     }));
   });
 
@@ -207,8 +210,20 @@ export function registerRoomHandlers(ctx: DispatcherContext, handlers: Map<strin
 
     player.ws = ws;
 
+    // rejoin 时 ws 尚未通过 findRoomByWs 关联，Dispatcher 的 player 分支不会触发；
+    // 这里手动续期登录 session，避免重连后心跳无 _username 导致 session 过期
+    (ws as any)._username = player.username;
+    try {
+      ensureUserSession(player.username);
+    } catch (e) {
+      console.error('[rejoin_room] ensureUserSession 失败:', e);
+    }
+
     if (wsServer?.cancelPendingDestruction) {
       wsServer.cancelPendingDestruction(roomId);
+    }
+    if (wsServer?.cancelPendingPlayerRemoval) {
+      wsServer.cancelPendingPlayerRemoval(player.id);
     }
 
     upsertUserSession(player.id, player.username, roomId);

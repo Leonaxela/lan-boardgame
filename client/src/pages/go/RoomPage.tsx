@@ -317,13 +317,13 @@ export default function GoRoomPage() {
           <button className="btn-exit-room" onClick={async () => {
             if (!room) {
               await modalConfirm('房间已被销毁，无法继续！');
-              window.location.href = '/'; return;
+              nav('/'); return;
             }
             if (isOwner) {
               const ok = await modalConfirm('确定要销毁房间吗？所有玩家将被移出');
               if (!ok) return;
             }
-            leaveRoom(); window.location.href = '/';
+            leaveRoom(); nav('/');
           }} title="退出房间">
             退出房间 🚪
           </button>

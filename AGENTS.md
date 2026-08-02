@@ -14,6 +14,8 @@ npm run client       # client dev (vite, port 3030, opens browser)
 
 无测试脚本。Server 代理 `/api/*` 到 `http://localhost:8080`。Client 使用 `--strictPort` 固定 3030。
 
+**⚠️ 开发期已知现象**:`npm run server` 是 `tsx watch`,保存 server 代码会**自动重启进程**(重启间隙约 0.5~2 秒,8080 端口无监听)。此时任何 HTTP 请求(vite 代理)会报 `ECONNREFUSED`,前端表现为请求失败/网络错误——不是代码 bug。前端关键请求(如 `UserProfileModal` 的 profile/records)已加自动重试绕过此窗口;改完 server 代码后 1~2 秒内避免触发 HTTP 请求即可。
+
 ## Workspace structure
 
 | Path | Package | Role |

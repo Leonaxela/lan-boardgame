@@ -5,6 +5,7 @@ import {
 } from '@lan-boardgame/mahjong';
 import type { AvailableAction, MahjongState } from '@lan-boardgame/mahjong';
 import { mahjongRoomManager } from './MahjongRoomManager.js';
+import { ensureUserSession } from '../room/RoomPersistence.js';
 
 const ACTION_TIMEOUT_MS = 15000;  // 15秒操作超时
 
@@ -312,6 +313,17 @@ export function handleMahjongMessage(ws: WebSocket, raw: string) {
   let msg: any;
   try { msg = JSON.parse(raw); } catch { return; }
   const { type, payload = {} } = msg;
+
+  // 麻将通道独立于 Dispatcher：统一在此续期登录 session，
+  // 保证麻将玩家刷新/重连后 _username 不丢、心跳持续续期（否则 120s 后 session 过期，其他浏览器可重复登录）
+  const mjRoom = mahjongRoomManager.findRoomByWs(ws);
+  const mjPlayer = mjRoom?.players.find(p => p.ws === ws);
+  const mjSpectator = mjRoom?.spectators.find(p => p.ws === ws);
+  const roomUser = mjPlayer?.username || mjSpectator?.username || payload.username;
+  if (roomUser && typeof roomUser === 'string') {
+    (ws as any)._username = roomUser;
+    try { ensureUserSession(roomUser); } catch (e) { console.error('[Mahjong] ensureUserSession 失败:', e); }
+  }
 
   switch (type) {
     case 'mahjong_create_room': {

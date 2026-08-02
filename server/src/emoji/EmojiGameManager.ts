@@ -2,6 +2,7 @@ import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import WebSocket from 'ws';
+import { ensureUserSession } from '../room/RoomPersistence.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const QUESTIONS_PATH = join(__dirname, '..', '..', 'data', 'emoji-questions', 'questions.json');
@@ -96,6 +97,15 @@ function sendTo(ws: WebSocket, message: object): void {
 export function handleEmojiMessage(ws: WebSocket, msg: any): void {
   const type = msg.type;
   const payload = msg.payload || {};
+
+  // emoji 通道独立于 Dispatcher：统一在此续期登录 session，
+  // 保证 emoji 玩家刷新/重连后 _username 不丢、心跳持续续期
+  const emojiRoom = findRoomByWs(ws);
+  const roomUser = emojiRoom?.players.find(p => p.ws === ws)?.username || payload.username;
+  if (roomUser && typeof roomUser === 'string') {
+    (ws as any)._username = roomUser;
+    try { ensureUserSession(roomUser); } catch (e) { console.error('[Emoji] ensureUserSession 失败:', e); }
+  }
 
   switch (type) {
     case 'emoji_create_room': return handleCreateRoom(ws, payload);

@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { wsClient } from '../../net/WebSocketClient';
 import TileView from './components/TileView';
 import Dropdown from '../../components/Dropdown';
 import { formatChatTime } from '../../utils/chat';
@@ -19,6 +21,7 @@ const SEAT_NAMES=['东','南','西','北']; const SEAT_COLORS=['#e74c3c','#3498d
 
 export default function MahjongPage() {
   const ws=useWebSocket();
+  const nav=useNavigate();
   const [phase,setPhase]=useState<Phase>('playing');
   const [players,setPlayers]=useState<PlayerInfo[]>([]);
   const [spectators,setSpectators]=useState<SpectatorInfo[]>([]);
@@ -53,14 +56,14 @@ export default function MahjongPage() {
     u.push(ws.onMessage('mahjong_spectator_joined',(p:any)=>{setSpectators(p.spectators||[]);}));
     u.push(ws.onMessage('mahjong_action_performed',(p:any)=>{switch(p.action){case'chi':speakChi();break;case'peng':speakPeng();break;case'gang':case'angang':case'jiagang':speakGang();break;case'hu':speakHu();break;}}));
     u.push(ws.onMessage('error',(p:any)=>{console.error('[Mahjong Error]',p.message||JSON.stringify(p));}));
-    u.push(ws.onMessage('room_destroyed',()=>{window.location.href='/';}));
+    u.push(ws.onMessage('room_destroyed',()=>{wsClient.clearCache();nav('/');}));
     return ()=>u.forEach(fn=>fn());
   },[ws.connected]);
 
   useEffect(()=>{cr.current?.scrollIntoView();},[chatLog]);
   const send=useCallback((t:string,p?:any)=>{ws.send(t,p||{});},[ws.send]);
   const uname=localStorage.getItem('username')||'玩家'; const s=gs;
-  const exit=useCallback(()=>{send('mahjong_leave_room');window.location.href='/';},[send]);
+  const exit=useCallback(()=>{send('mahjong_leave_room');wsClient.clearCache();nav('/');},[send,nav]);
   const endGame=useCallback(()=>{setGs(null);setPhase('playing');send('mahjong_end_game');},[send]);
   const sit=useCallback((seat:number)=>{send('mahjong_sit',{seat});},[send]);
   const stand=useCallback(()=>{send('mahjong_stand',{});},[send]);

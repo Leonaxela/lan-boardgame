@@ -6,6 +6,7 @@ import { ChatHandler } from '../chat/ChatHandler.js';
 import { kataGoManager } from '../katago/KataGoManager.js';
 import type { ClientMessage, HandlerFn, DispatcherContext } from './types.js';
 import { sendError } from './utils.js';
+import { ensureUserSession } from '../room/RoomPersistence.js';
 import { registerRoomHandlers } from './handlers/RoomHandler.js';
 import { registerGameHandlers } from './handlers/GameHandler.js';
 import { registerAIHandlers, createScheduleAIMove } from './handlers/AIHandler.js';
@@ -55,6 +56,17 @@ export class Dispatcher {
 
     const room = this.roomManager.findRoomByWs(ws);
     const player = room?.getPlayerByWs(ws);
+
+    // 房间内消息不带 username，但 ws 已关联房间玩家：用 player.username 续期登录 session，
+    // 保证刷新/重连后在线状态不丢（否则心跳无 _username 续期，120s 后 session 过期，其他浏览器可重复登录）
+    if (player?.username) {
+      (ws as any)._username = player.username;
+      try {
+        ensureUserSession(player.username);
+      } catch (e) {
+        console.error('[Dispatcher] ensureUserSession 失败:', e);
+      }
+    }
 
     if (['create_room', 'join_room', 'get_rooms', 'ping', 'start_ai_game', 'start_katago_game', 'start_fairy_stockfish_game', 'rejoin_room'].includes(msg.type)) {
       handler(ws, msg, player as RoomPlayer, room as Room);

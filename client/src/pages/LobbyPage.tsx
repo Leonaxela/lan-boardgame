@@ -21,7 +21,8 @@ export default function LobbyPage() {
   const [gameStats, setGameStats] = useState<Record<string, {rooms:number,players:number}>>({});
   const [emojiStats, setEmojiStats] = useState({ rooms: 0, players: 0 });
   const totalRooms = Object.values(gameStats).reduce((sum, g) => sum + g.rooms, 0);
-  const totalPlayers = Object.values(gameStats).reduce((sum, g) => sum + g.players, 0);
+  // 在线人数 = 登录成功且心跳活跃的用户数（由服务端统计，登录即算在线）
+  const [onlineCount, setOnlineCount] = useState(0);
   const [username, setUsername] = useState(localStorage.getItem('username') || '');
   const [games, setGames] = useState<GameInfo[]>([]);
   const [showProfile, setShowProfile] = useState(false);
@@ -37,13 +38,20 @@ export default function LobbyPage() {
   }, []);
 
   useEffect(() => {
-    const u1 = onMessage('room_list', (p) => { setRoomList(p.rooms || []); setGameStats(p.gameStats || {}); });
+    const u1 = onMessage('room_list', (p) => { setRoomList(p.rooms || []); setGameStats(p.gameStats || {}); if (typeof p.onlineCount === 'number') setOnlineCount(p.onlineCount); });
     const u2 = onMessage('room_created', (p) => {
       localStorage.setItem('username', username);
+      // 记录重连凭据，供刷新/直链 rejoin 使用
+      if (p.roomId && p.player?.id) {
+        localStorage.setItem('rejoin_room', JSON.stringify({ roomId: p.roomId, playerId: p.player.id }));
+      }
       nav(`/room/${p.roomId}`);
     });
     const u3 = onMessage('room_joined', (p) => {
       localStorage.setItem('username', username);
+      if (p.roomId && p.player?.id) {
+        localStorage.setItem('rejoin_room', JSON.stringify({ roomId: p.roomId, playerId: p.player.id }));
+      }
       nav(`/room/${p.roomId}`);
     });
     const u4 = onMessage('emoji_room_list', (p) => {
@@ -72,12 +80,12 @@ export default function LobbyPage() {
   // 连接成功后获取房间列表，之后每3秒刷新
   useEffect(() => {
     if (!connected) return;
-    send('get_rooms', {});
+    send('get_rooms', { username: username || undefined });
     send('emoji_get_rooms', {});
     send('mahjong_get_rooms', {});
-    const timer = setInterval(() => { send('get_rooms', {}); send('emoji_get_rooms', {}); send('mahjong_get_rooms', {}); }, 3000);
+    const timer = setInterval(() => { send('get_rooms', { username: username || undefined }); send('emoji_get_rooms', {}); send('mahjong_get_rooms', {}); }, 3000);
     return () => clearInterval(timer);
-  }, [connected, send]);
+  }, [connected, send, username]);
 
   const openGame = (gameId: string) => {
     const game = games.find(g => g.id === gameId);
@@ -151,7 +159,7 @@ export default function LobbyPage() {
           {connected ? '已连接' : '连接中...'}
         </span>
           共 <span className="stat-green">{totalRooms}</span> 个房间，
-          共 <span className="stat-green">{totalPlayers}</span> 人在线
+          共 <span className="stat-green">{onlineCount}</span> 人在线
         </div>
         <div className="lobby-header-right">
           <button

@@ -308,9 +308,9 @@ export default function ChineseChessRoomPage() {
         <div className="room-header">
           <button className="btn-room-id">房间 {roomId}</button>
           <button className="btn-exit-room" onClick={async () => {
-            if (!room) { await modalConfirm('房间已被销毁！'); window.location.href = '/'; return; }
+            if (!room) { await modalConfirm('房间已被销毁！'); nav('/'); return; }
             if (isOwner) { const ok = await modalConfirm('确定销毁房间？'); if (!ok) return; }
-            leaveRoom(); window.location.href = '/';
+            leaveRoom(); nav('/');
           }}>退出房间 🚪</button>
         </div>
         <div className="player-list">
