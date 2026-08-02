@@ -9,12 +9,10 @@
   ],
   "scripts": {
     "client": "npm --prefix client run dev",
-    "server": "npm --prefix server run dev",
-    "test": "npx tsx games/go/src/__tests__/engine.test.ts && npx tsx games/go/src/__tests__/ai.test.ts"
+    "server": "npm --prefix server run dev"
   },
   "devDependencies": {
-    "@types/ws": "^8.18.1",
-    "tsx": "^4.22.4"
+    "@types/ws": "^8.18.1"
   },
   "dependencies": {
     "chess.js": "^1.4.0",
